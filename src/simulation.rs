@@ -12,7 +12,6 @@ use std;
 use uncertain::UncertainF64;
 use output_parser;
 use std::fmt;
-use util;
 use util::Result;
 use std::result::Result as StdResult;
 
@@ -205,7 +204,6 @@ impl<T> Omitable<T> {
         }
     }
 
-
     #[allow(dead_code)]
     pub fn map<U, F: Fn(T) -> U>(self, f: F) -> Omitable<U> {
         match self {
@@ -263,7 +261,7 @@ fn traverse_result<T, E>(iter: Vec<StdResult<T, E>>) -> StdResult<Vec<T>, E> {
 
 impl ParallelFinishedSimulation {
     pub fn report(&self) -> ParallelSimulationReport {
-        util::save(Path::new("fin_par_sim.json"), self);
+        // util::save(Path::new("fin_par_sim.json"), self);
         let outputs: Vec<SingleSimulationReport> = self.outputs
             .iter()
             .map(FinishedSimulation::report)
@@ -332,7 +330,7 @@ impl ParallelFinishedSimulation {
         let wt = UncertainF64::from_value_var(1. / (nruns as f64), 0.);
         // normalize
         ret = ret.iter()
-            .map(|&(ref label, ref dose)|(label.to_string(), *dose * wt))
+            .map(|&(ref label, ref dose)| (label.to_string(), *dose * wt))
             .collect();
         Ok(ret)
     }
@@ -349,10 +347,8 @@ macro_rules! assert_approx_eq {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::{Path, PathBuf};
-    use util::{load, asset_path};
+    use util::{asset_path, load};
     use uncertain::UncertainF64;
-
 
     #[test]
     fn test_report_par_sim() {

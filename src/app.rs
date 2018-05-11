@@ -115,26 +115,25 @@ fn create_app() -> clap::App<'static, 'static> {
                     Arg::with_name("PATH")
                         .help("Path to a .egsinp file that should be formatted.")
                         .index(1),
-                )
+                ),
         )
 }
 
 #[derive(Debug)]
 struct FormatConfig {
-    path:PathBuf,
+    path: PathBuf,
 }
 
 impl FormatConfig {
     pub fn parse(matches: &ArgMatches) -> Result<Self> {
         let spath = matches.value_of("PATH").unwrap();
         let path = abspath_from_string(spath)?;
-        Ok(Self {path})
+        Ok(Self { path })
     }
 
     pub fn run(&self) -> Result<()> {
         let formatted = {
-            let file = fs::File::open(&self.path)
-                .map_err(debug_string)?;
+            let file = fs::File::open(&self.path).map_err(debug_string)?;
             let mut reader = BufReader::new(file);
             TokenStream::parse_reader(&mut reader)?.to_string()
         };
@@ -148,7 +147,7 @@ impl FormatConfig {
 #[derive(Debug)]
 struct RerunConfig {
     path: PathBuf, // path to input
-    outputpath: PathBuf
+    outputpath: PathBuf,
 }
 
 impl RerunConfig {
@@ -157,11 +156,11 @@ impl RerunConfig {
         let path = abspath_from_string(spath)?;
         let soutputpath = matches.value_of("OUTPUT").unwrap();
         let outputpath = abspath_from_string(soutputpath)?;
-        Ok(RerunConfig {path, outputpath})
+        Ok(RerunConfig { path, outputpath })
     }
 
     pub fn run(&self) -> Result<()> {
-        let report:ParallelSimulationReport = load(&self.path)?;
+        let report: ParallelSimulationReport = load(&self.path)?;
         let sim = report.input;
         let out = sim.run()?.report();
         save(&self.outputpath, &out)?;

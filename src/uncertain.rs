@@ -71,12 +71,10 @@ impl Mul for UncertainF64 {
 
 impl fmt::Display for UncertainF64 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-     let value = self.value();
-     let pstd = self.rstd() * 100.;
-     write!(f, "{} +- {}%", value, pstd)
+        let value = self.value();
+        let pstd = self.rstd() * 100.;
+        write!(f, "{} +- {}%", value, pstd)
     }
-
-
 }
 
 #[allow(unused_macros)]

@@ -13,5 +13,6 @@ serde = "1.0.45"
 serde_derive = "1.0.45"
 clap = "2.31"
 assert_cli = "0.5"
+rand = "0.4.2"
 
 [dev-dependencies]

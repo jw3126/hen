@@ -1,8 +1,10 @@
 extern crate num_cpus;
+extern crate rand;
 extern crate rayon;
 extern crate regex;
 extern crate sha3;
 
+#[allow(unused_imports)]
 #[macro_use]
 extern crate assert_cli;
 
