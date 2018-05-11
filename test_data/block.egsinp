@@ -1,0 +1,158 @@
+
+######## Input #######
+:start geometry definition:
+  :start geometry:
+        library   = egs_planes
+        type      = EGS_Xplanes
+        name      = the_planes
+        positions = -1 1
+    :stop geometry:
+
+    :start geometry:
+        library   = egs_cylinders
+        type      = EGS_XCylinders
+        name      = the_cylinder
+        radii     = 10
+        :start media input:
+            media = AIR521ICRU
+        :stop media input:
+    :stop geometry:
+
+    :start geometry:
+        library       = egs_cdgeometry
+        name          = Block
+        base geometry = the_planes
+        set geometry  = 0 the_cylinder
+    :stop geometry:
+    :start geometry:
+        library     = egs_planes
+        type        = EGS_Xplanes
+        name        = cse_planes
+        positions   = -1.6 1.6
+    :stop geometry:
+    
+    :start geometry:
+        library     = egs_cylinders
+        type        = EGS_XCylinders
+        name        = cse_cyls0
+        midpoint    = 0 0 0
+        radii       = 1.6
+    :stop geometry:
+    
+    :start geometry:
+        library    = egs_ndgeometry
+        name       = cse_0
+        dimensions = cse_planes cse_cyls0
+        :start media input:
+            media = AIR521ICRU
+        :stop media input:
+    :stop geometry:
+    :start geometry:
+        library = egs_ndgeometry
+        type    = EGS_XYZGeometry
+        x-planes = -15 15
+        y-planes = -15 15
+        z-planes = -10 20
+        name = phantom
+        :start media input:
+            media = AIR521ICRU
+        :stop media input:
+    :stop geometry:
+    :start geometry:
+        library = egs_genvelope
+        name    = cse_phantom
+        base geometry = phantom
+        inscribed geometries = cse_0
+    :stop geometry:
+    :start geometry:
+        library = egs_genvelope
+        name = Block_
+        base geometry = cse_phantom
+        inscribed geometries = Block
+    :stop geometry:
+    :start geometry:
+        library = egs_cylinders
+        type = EGS_XCylinders
+        radii = 1.6
+        name = cav_cyl
+    :stop geometry:
+    :start geometry:
+        library = egs_planes
+        type = EGS_Xplanes
+        positions = -1.3 1.3
+        name = cav_planes
+    :stop geometry:
+    :start geometry:
+        library = egs_ndgeometry
+        name = cavity
+        dimensions = cav_planes cav_cyl
+    :stop geometry:
+    simulation geometry = Block_
+:stop geometry definition:
+:start source definition:
+    :start source:
+        library = egs_collimated_source
+        name = the_source
+        :start source shape:
+            type = point
+            position = 0 0 -10
+        :stop source shape:
+        :start target shape:
+            library   = egs_rectangle # some comment 
+            rectangle = -2 -2 \
+ 2 2
+        :stop target shape:
+        distance = 110
+        charge = 0
+        :start spectrum:
+             type = monoenergetic
+            energy = 13.75
+        :stop spectrum:
+    :stop source:
+    simulation source = the_source
+:stop source definition:
+:start run control:
+    ncase = 100000
+    nbatch = 10
+:stop run control:
+:start rng definition:
+   type = ranmar
+   initial seeds = 20 1
+:stop rng definition:
+:start scoring options:
+  calculation type = dose
+    :start calculation geometry:
+        geometry name = Block_
+        cavity regions = 2
+        cavity mass = 1
+        cavity geometry = cavity
+        enhance regions = -1
+        enhancement = 512
+    :stop calculation geometry:
+:stop scoring options:
+:start variance reduction:
+    cs enhancement = 0
+:stop variance reduction:
+:start MC transport parameter:
+    Global ECUT = 0.521
+:stop MC transport parameter:
+# 
+# a
+#
+# lot
+# of 
+# comments
+
+
+# and blank lines
+#
+
+
+:start ausgab object definition:
+    :start ausgab object:
+        library = egs_track_scoring
+        score photons   = yes
+        score electrons = yes
+        score positrons = yes
+    :stop ausgab object:
+:stop ausgab object definition:
