@@ -1,0 +1,60 @@
+# We have three different calculation geometies in this example
+#
+:start geometry definition:
+    :start geometry:
+        library     = egs_cylinders
+        type        = EGS_XCylinders
+        name        = the_cylinder
+        midpoint    = 0 0 0
+        radii       = 10 20 30 40
+        :start media input:
+            media = H2O521ICRU H2O521ICRU H2O521ICRU H2O521ICRU
+            set medium = 0 0
+            set medium = 1 1
+            set medium = 2 2
+            set medium = 3 3
+        :stop media input:
+    :stop geometry:
+    simulation geometry = the_cylinder
+:stop geometry definition:
+:start source definition:
+    :start source:
+        library = egs_collimated_source
+        name = the_source
+        :start source shape:
+            type = point
+            position = 0 0 -10
+        :stop source shape:
+        :start target shape:
+            library   = egs_rectangle # some comment 
+            rectangle = -2 -2 \
+ 2 2
+        :stop target shape:
+        distance = 10
+        charge = 0
+        :start spectrum:
+             type = monoenergetic
+            energy = 5.1
+        :stop spectrum:
+    :stop source:
+    simulation source = the_source
+:stop source definition:
+:start run control:
+    ncase = 10000
+    nbatch = 10
+:stop run control:
+:start rng definition:
+   type = ranmar
+   initial seeds = 20 1
+:stop rng definition:
+:start scoring options:
+  calculation type = dose
+    :start calculation geometry:
+        geometry name = the_cylinder
+        cavity regions = 0 1
+        cavity mass = 1
+    :stop calculation geometry:
+:stop scoring options:
+:start MC transport parameter:
+    Global ECUT = 0.521
+:stop MC transport parameter:

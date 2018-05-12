@@ -11,8 +11,7 @@ use std::io::Write;
 use tokenizer::TokenStream;
 use std::io::BufReader;
 use std;
-static DEFAULT_APP: &str = "egs_chamber";
-static DEFAULT_PEGSFILE: &str = "521icru";
+use std::ffi::OsStr;
 
 fn create_app() -> clap::App<'static, 'static> {
     clap::App::new("egscli")
@@ -29,7 +28,7 @@ fn create_app() -> clap::App<'static, 'static> {
                         .index(1)
                         .takes_value(true)
                         .required(true)
-                        .help("Set the input file."),
+                        .help("Name of the input file."),
                 )
                 .arg(
                     Arg::with_name("FORCE")
@@ -42,6 +41,7 @@ fn create_app() -> clap::App<'static, 'static> {
                         .short("p")
                         .long("pegsfile")
                         .help("Name of the pegsfile.")
+                        .default_value("521icru")
                         .takes_value(true),
                 )
                 .arg(
@@ -49,20 +49,21 @@ fn create_app() -> clap::App<'static, 'static> {
                         .short("o")
                         .long("output")
                         .takes_value(true)
-                        .help("Name of output file.")
+                        .help("Name of the output file.")
                         .required(true), // TODO guess it
                 )
                 .arg(
                     Arg::with_name("APPLICATION")
                         .short("a")
                         .long("app")
-                        .help("Name of the application. Default: egs_chamber.")
+                        .help("Name of the application.")
+                        .default_value("egs_chamber")
                         .takes_value(true),
                 )
                 .arg(
                     Arg::with_name("NTHREADS")
                         .long("nthreads")
-                        .help("Number of threads that should be used for the simulation.")
+                        .help("Number of threads that should be used for the simulation. Defaults to the number of cores.")
                         .takes_value(true),
                 ),
         )
@@ -273,6 +274,7 @@ struct RunConfig {
     pegsfile: String,
     force: bool,
     nthreads: usize,
+    dir: bool, // run all files in a directory
 }
 
 fn abspath_from_string(s: &str) -> Result<PathBuf> {
@@ -297,13 +299,48 @@ impl RunConfig {
         }
     }
 
-    fn create_single_simulation(&self) -> Result<SingleSimulation> {
-        SingleSimulation::from_egsinp_path(&self.application, &self.inputpath, &self.pegsfile)
+    fn create_single_simulation(&self, input_path: &Path) -> Result<SingleSimulation> {
+        SingleSimulation::from_egsinp_path(&self.application, input_path, &self.pegsfile)
     }
 
-    fn create_parallel_simulation(&self) -> Result<ParallelSimulation> {
-        let prototype = self.create_single_simulation()?;
-        return Ok(prototype.splitn(self.nthreads));
+    fn run_egsinp(&self, input_path: &Path, output_path: &Path) -> Result<()> {
+        match output_path.parent() {
+            None => {}
+            Some(d) => fs::create_dir_all(d).map_err(debug_string)?,
+        };
+        let out = self.create_single_simulation(input_path)?
+            .splitn(self.nthreads)
+            .run()?
+            .report();
+        save(output_path, &out)
+    }
+
+    fn create_input_output_paths(&self) -> Result<Vec<(PathBuf, PathBuf)>> {
+        let ret = if self.dir {
+            fs::read_dir(self.inputpath.clone())
+                .map_err(debug_string)?
+                .map(|entry| entry.unwrap().path())
+                .filter(|path| path.extension().unwrap_or(OsStr::new("fail")) == "egsinp")
+                .map(|inp| {
+                    let filestem = inp.file_stem().unwrap();
+                    let mut outp = self.outputpath.clone();
+                    outp.push(filestem);
+                    outp.set_extension("json");
+                    (inp.clone(), outp)
+                })
+                .collect()
+        } else {
+            vec![(self.inputpath.clone(), self.outputpath.clone())]
+        };
+        Ok(ret)
+    }
+
+    fn run(&self) -> Result<()> {
+        let paths = self.create_input_output_paths()?;
+        for (inp, outp) in paths {
+            self.run_egsinp(&inp, &outp)?;
+        }
+        Ok(())
     }
 }
 
@@ -312,16 +349,11 @@ impl SubCmd for RunConfig {
         let force = matches.is_present("FORCE");
         let sinputpath = matches.value_of("INPUT").unwrap();
         let inputpath = abspath_from_string(sinputpath)?;
+        let dir = inputpath.is_dir();
         let soutputpath = matches.value_of("OUTPUT").unwrap();
         let outputpath = abspath_from_string(soutputpath)?;
-        let application = matches
-            .value_of("APPLICATION")
-            .unwrap_or(DEFAULT_APP)
-            .to_string();
-        let pegsfile = matches
-            .value_of("PEGSFILE")
-            .unwrap_or(DEFAULT_PEGSFILE)
-            .to_string();
+        let application = matches.value_of("APPLICATION").unwrap().to_string();
+        let pegsfile = matches.value_of("PEGSFILE").unwrap().to_string();
         let nthreads = match matches.value_of("NTHREADS") {
             None => num_cpus::get(),
             Some(snthreads) => snthreads
@@ -335,16 +367,14 @@ impl SubCmd for RunConfig {
             pegsfile,
             force,
             nthreads,
+            dir,
         };
         ret.validate()?;
         Ok(ret)
     }
 
     fn run(&self) -> Result<()> {
-        let sim = self.create_parallel_simulation()?;
-        let out = sim.run()?.report();
-        save(&self.outputpath, &out)?;
-        return Ok(());
+        Self::run(self)
     }
 }
 
@@ -357,6 +387,7 @@ pub fn app_main() -> Result<()> {
         ("view", Some(m)) => ViewConfig::main(m),
         ("rerun", Some(m)) => RerunConfig::main(m),
         ("fmt", Some(m)) => FormatConfig::main(m),
+        ("", _) => Err("Try hen --help".to_string()),
         x => Err(format!("Unknown subcommand {:?}. Try hen --help", x).to_string()),
     }
 }

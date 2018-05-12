@@ -29,8 +29,6 @@ mod output_parser;
 mod util;
 mod uncertain;
 mod app;
-
-// is there a cleaner way to do these tests?
 mod tests;
 
 use app::app_main;
@@ -38,9 +36,6 @@ use app::app_main;
 fn main() {
     match app_main() {
         Ok(_) => {}
-        Err(err) => {
-            let msg = format!("Error {:?}. Try hen --help", err);
-            panic!(msg)
-        }
+        Err(err) => panic!(err),
     }
 }

@@ -21,6 +21,7 @@ mod tests {
         assert_cli::Assert::main_binary()
             .with_args(&["run", sinput_path, "-o", soutput_path])
             .unwrap();
+
         let r: ParallelSimulationReport = load(&output_path).unwrap();
         let doses = r.dose.into_result().unwrap();
         assert_eq!(doses.len(), 3);
@@ -32,6 +33,49 @@ mod tests {
         assert_eq!(geo01, "the_cylinder");
         assert!(((dose0.value() + dose1.value() / dose01.value()).abs() - 1.) < 0.01);
         fs::remove_file(&output_path).unwrap();
+    }
+
+    #[test]
+    fn test_run_many() {
+        let input_path1 = asset_path().join("input_many").join("file1.egsinp");
+        let sinput_path1 = input_path1.to_str().unwrap();
+        let output_path1 = asset_path().join("output").join(randstring());
+        let soutput_path1 = output_path1.to_str().unwrap();
+        assert_cli::Assert::main_binary()
+            .with_args(&["run", sinput_path1, "-o", soutput_path1])
+            .unwrap();
+
+        let input_path2 = asset_path().join("input_many").join("file2.egsinp");
+        let sinput_path2 = input_path2.to_str().unwrap();
+        let output_path2 = asset_path().join("output").join(randstring());
+        let soutput_path2 = output_path2.to_str().unwrap();
+        assert_cli::Assert::main_binary()
+            .with_args(&["run", sinput_path2, "-o", soutput_path2])
+            .unwrap();
+
+        let input_path_many = asset_path().join("input_many");
+        let sinput_path_many = input_path_many.to_str().unwrap();
+        let output_path_many = asset_path().join("output_many");
+        let output_path_many1 = output_path_many.join("file1.json");
+        let output_path_many2 = output_path_many.join("file2.json");
+        let soutput_path_many = output_path_many.to_str().unwrap();
+
+        assert_cli::Assert::main_binary()
+            .with_args(&["run", sinput_path_many, "-o", soutput_path_many])
+            .unwrap();
+
+        let r1: ParallelSimulationReport = load(&output_path1).unwrap();
+        let r2: ParallelSimulationReport = load(&output_path2).unwrap();
+
+        let m1: ParallelSimulationReport = load(&output_path_many1).unwrap();
+        let m2: ParallelSimulationReport = load(&output_path_many2).unwrap();
+        assert_eq!(r1.dose, m1.dose);
+        assert_eq!(r2.dose, m2.dose);
+        assert!(r1 != m1);
+
+        fs::remove_file(&output_path1).unwrap();
+        fs::remove_file(&output_path2).unwrap();
+        fs::remove_dir_all(&output_path_many).unwrap();
     }
 
     #[test]
