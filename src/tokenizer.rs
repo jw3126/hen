@@ -203,6 +203,35 @@ fn single<T>(v: &[T]) -> Option<&T> {
     }
 }
 
+fn read_clean_line(reader: &mut BufRead) -> Result<String> {
+    let mut line = String::new();
+    if reader.read_line(&mut line).unwrap() == 0 {
+        return Err("End of file".to_string());
+    }
+    let line = line.split('#').next().unwrap();
+    let line = line.trim();
+    if line == "" {
+        return read_clean_line(reader);
+    } else {
+        return Ok(line.to_string());
+    }
+}
+
+fn read_token_raw(reader: &mut BufRead) -> Result<String> {
+    let mut line = read_clean_line(reader)?;
+    if let Some('\\') = line.chars().last() {
+        line = format!(
+            "{}{}",
+            {
+                line.pop();
+                line
+            },
+            read_token_raw(reader).unwrap()
+        );
+    }
+    Ok(line)
+}
+
 #[test]
 fn test_parse_single_token() {
     let s_start = ":start rng definition:";
@@ -301,33 +330,4 @@ fn test_parse_tokenstream() {
         TokenStream::parse_string(&stream.to_string()).unwrap(),
         stream
     );
-}
-
-fn read_clean_line(reader: &mut BufRead) -> Result<String> {
-    let mut line = String::new();
-    if reader.read_line(&mut line).unwrap() == 0 {
-        return Err("End of file".to_string());
-    }
-    let line = line.split('#').next().unwrap();
-    let line = line.trim();
-    if line == "" {
-        return read_clean_line(reader);
-    } else {
-        return Ok(line.to_string());
-    }
-}
-
-fn read_token_raw(reader: &mut BufRead) -> Result<String> {
-    let mut line = read_clean_line(reader)?;
-    if let Some('\\') = line.chars().last() {
-        line = format!(
-            "{}{}",
-            {
-                line.pop();
-                line
-            },
-            read_token_raw(reader).unwrap()
-        );
-    }
-    Ok(line)
 }

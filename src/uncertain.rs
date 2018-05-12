@@ -31,6 +31,10 @@ impl UncertainF64 {
         self.value
     }
 
+    pub fn from_value(value: f64) -> Self {
+        Self::from_value_var(value, 0.)
+    }
+
     pub fn from_value_rstd(value: f64, rstd: f64) -> Self {
         Self { value, rstd }
     }
@@ -77,29 +81,38 @@ impl fmt::Display for UncertainF64 {
     }
 }
 
-#[allow(unused_macros)]
-macro_rules! assert_approx_eq {
-    ($a:expr, $b:expr) => ({
-        let (a, b) = (&$a, &$b);
-        assert!((*a - *b).abs() / (a.abs() + b.abs()) < 1.0e-6,
-                "{} is not approximately equal to {}", *a, *b);
-    })
-}
-#[test]
-#[allow(non_snake_case)]
-fn test_UncertainF64() {
-    let u1 = UncertainF64::from_value_var(1., 100.);
-    assert_eq!(u1.value(), 1.);
-    assert_eq!(u1.var(), 100.);
-    assert_eq!(u1.std(), 10.);
-    assert_eq!(u1.rstd(), 10.);
-    let u2 = u1 + u1;
-    assert_approx_eq!(u2.value(), 2.);
-    assert_approx_eq!(u2.var(), 200.);
-    let u3 = UncertainF64::from_value_rstd(10., 0.1);
-    assert_approx_eq!(u3.var(), 1.);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let c1 = UncertainF64::from_value_var(23., 0.);
-    assert_approx_eq!(u1.var(), (u1 + c1).var());
-    assert_approx_eq!(u1.std() * c1.value(), (u1 * c1).std());
+    #[test]
+    #[allow(non_snake_case)]
+    fn test_UncertainF64() {
+        let u1 = UncertainF64::from_value_var(1., 100.);
+        assert_eq!(u1.value(), 1.);
+        assert_eq!(u1.var(), 100.);
+        assert_eq!(u1.std(), 10.);
+        assert_eq!(u1.rstd(), 10.);
+        let u2 = u1 + u1;
+        assert_relative_eq!(u2.value(), 2.);
+        assert_relative_eq!(u2.var(), 200.);
+        let u3 = UncertainF64::from_value_rstd(10., 0.1);
+        assert_relative_eq!(u3.var(), 1.);
+
+        let c1 = UncertainF64::from_value_var(23., 0.);
+        assert_relative_eq!(u1.var(), (u1 + c1).var());
+        assert_relative_eq!(u1.std() * c1.value(), (u1 * c1).std());
+    }
+
+    quickcheck! {
+        fn prop_inclusion_multipicative(x:f64, y:f64) -> bool {
+            UncertainF64::from_value(x) * UncertainF64::from_value(y)
+                == UncertainF64::from_value(x*y)
+        }
+
+        fn prop_inclusion_additive(x:f64, y:f64) -> bool {
+            UncertainF64::from_value(x) + UncertainF64::from_value(y)
+                == UncertainF64::from_value(x+y)
+        }
+    }
 }

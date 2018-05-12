@@ -10,6 +10,7 @@ use std::process;
 use std::io::Write;
 use tokenizer::TokenStream;
 use std::io::BufReader;
+use std;
 static DEFAULT_APP: &str = "egs_chamber";
 static DEFAULT_PEGSFILE: &str = "521icru";
 
@@ -119,19 +120,30 @@ fn create_app() -> clap::App<'static, 'static> {
         )
 }
 
+trait SubCmd
+where
+    Self: std::marker::Sized,
+{
+    fn parse(m: &ArgMatches) -> Result<Self>;
+    fn run(&self) -> Result<()>;
+    fn main(m: &ArgMatches) -> Result<()> {
+        Self::parse(m)?.run()
+    }
+}
+
 #[derive(Debug)]
 struct FormatConfig {
     path: PathBuf,
 }
 
-impl FormatConfig {
-    pub fn parse(matches: &ArgMatches) -> Result<Self> {
+impl SubCmd for FormatConfig {
+    fn parse(matches: &ArgMatches) -> Result<Self> {
         let spath = matches.value_of("PATH").unwrap();
         let path = abspath_from_string(spath)?;
         Ok(Self { path })
     }
 
-    pub fn run(&self) -> Result<()> {
+    fn run(&self) -> Result<()> {
         let formatted = {
             let file = fs::File::open(&self.path).map_err(debug_string)?;
             let mut reader = BufReader::new(file);
@@ -150,8 +162,8 @@ struct RerunConfig {
     outputpath: PathBuf,
 }
 
-impl RerunConfig {
-    pub fn parse(matches: &ArgMatches) -> Result<RerunConfig> {
+impl SubCmd for RerunConfig {
+    fn parse(matches: &ArgMatches) -> Result<RerunConfig> {
         let spath = matches.value_of("PATH").unwrap();
         let path = abspath_from_string(spath)?;
         let soutputpath = matches.value_of("OUTPUT").unwrap();
@@ -159,7 +171,7 @@ impl RerunConfig {
         Ok(RerunConfig { path, outputpath })
     }
 
-    pub fn run(&self) -> Result<()> {
+    fn run(&self) -> Result<()> {
         let report: ParallelSimulationReport = load(&self.path)?;
         let sim = report.input;
         let out = sim.run()?.report();
@@ -173,14 +185,14 @@ struct ViewConfig {
     path: PathBuf,
 }
 
-impl ViewConfig {
-    pub fn parse(matches: &ArgMatches) -> Result<ViewConfig> {
+impl SubCmd for ViewConfig {
+    fn parse(matches: &ArgMatches) -> Result<ViewConfig> {
         let spath = matches.value_of("PATH").unwrap();
         let path = abspath_from_string(spath)?;
         Ok(ViewConfig { path })
     }
 
-    pub fn run(&self) -> Result<()> {
+    fn run(&self) -> Result<()> {
         let ext = self.path
             .extension()
             .ok_or(
@@ -204,7 +216,9 @@ impl ViewConfig {
         }
         Ok(())
     }
+}
 
+impl ViewConfig {
     fn run_json(&self) -> Result<()> {
         let report: ParallelSimulationReport = load(&self.path)?;
         let input_content = report.input.prototype.input_content;
@@ -238,14 +252,14 @@ struct ShowConfig {
     path: PathBuf,
 }
 
-impl ShowConfig {
-    pub fn parse(matches: &ArgMatches) -> Result<ShowConfig> {
+impl SubCmd for ShowConfig {
+    fn parse(matches: &ArgMatches) -> Result<ShowConfig> {
         let spath = matches.value_of("PATH").unwrap();
         let path = abspath_from_string(spath)?;
         Ok(ShowConfig { path })
     }
 
-    pub fn run(&self) -> Result<()> {
+    fn run(&self) -> Result<()> {
         let report: ParallelSimulationReport = load(&self.path)?;
         Ok(println!("{}", report))
     }
@@ -275,7 +289,26 @@ fn abspath_from_string(s: &str) -> Result<PathBuf> {
 }
 
 impl RunConfig {
-    pub fn parse(matches: &ArgMatches) -> Result<RunConfig> {
+    pub fn validate(&self) -> Result<()> {
+        if self.nthreads == 0 {
+            Err("NTHREADS > 0 must hold.".to_string())
+        } else {
+            Ok(())
+        }
+    }
+
+    fn create_single_simulation(&self) -> Result<SingleSimulation> {
+        SingleSimulation::from_egsinp_path(&self.application, &self.inputpath, &self.pegsfile)
+    }
+
+    fn create_parallel_simulation(&self) -> Result<ParallelSimulation> {
+        let prototype = self.create_single_simulation()?;
+        return Ok(prototype.splitn(self.nthreads));
+    }
+}
+
+impl SubCmd for RunConfig {
+    fn parse(matches: &ArgMatches) -> Result<RunConfig> {
         let force = matches.is_present("FORCE");
         let sinputpath = matches.value_of("INPUT").unwrap();
         let inputpath = abspath_from_string(sinputpath)?;
@@ -307,27 +340,9 @@ impl RunConfig {
         Ok(ret)
     }
 
-    pub fn validate(&self) -> Result<()> {
-        if self.nthreads == 0 {
-            Err("NTHREADS > 0 must hold.".to_string())
-        } else {
-            Ok(())
-        }
-    }
-
-    fn create_single_simulation(&self) -> Result<SingleSimulation> {
-        SingleSimulation::from_egsinp_path(&self.application, &self.inputpath, &self.pegsfile)
-    }
-
-    fn create_parallel_simulation(&self) -> Result<ParallelSimulation> {
-        let prototype = self.create_single_simulation()?;
-        return Ok(prototype.splitn(self.nthreads));
-    }
-
-    pub fn run(&self) -> Result<()> {
+    fn run(&self) -> Result<()> {
         let sim = self.create_parallel_simulation()?;
         let out = sim.run()?.report();
-
         save(&self.outputpath, &out)?;
         return Ok(());
     }
@@ -337,11 +352,11 @@ pub fn app_main() -> Result<()> {
     let app = create_app();
     let matches = app.get_matches();
     match matches.subcommand() {
-        ("run", Some(m)) => RunConfig::parse(m)?.run(),
-        ("show", Some(m)) => ShowConfig::parse(m)?.run(),
-        ("view", Some(m)) => ViewConfig::parse(m)?.run(),
-        ("rerun", Some(m)) => RerunConfig::parse(m)?.run(),
-        ("fmt", Some(m)) => FormatConfig::parse(m)?.run(),
+        ("run", Some(m)) => RunConfig::main(m),
+        ("show", Some(m)) => ShowConfig::main(m),
+        ("view", Some(m)) => ViewConfig::main(m),
+        ("rerun", Some(m)) => RerunConfig::main(m),
+        ("fmt", Some(m)) => FormatConfig::main(m),
         x => Err(format!("Unknown subcommand {:?}. Try hen --help", x).to_string()),
     }
 }

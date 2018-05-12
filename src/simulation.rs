@@ -336,44 +336,6 @@ impl ParallelFinishedSimulation {
     }
 }
 
-macro_rules! assert_approx_eq {
-    ($a:expr, $b:expr) => ({
-        let (a, b) = (&$a, &$b);
-        assert!((*a - *b).abs() / (a.abs() + b.abs()) < 1.0e-6,
-                "{} is not approximately equal to {}", *a, *b);
-    })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use util::{asset_path, load};
-    use uncertain::UncertainF64;
-
-    #[test]
-    fn test_report_par_sim() {
-        let path = asset_path().join("fin_par_sim.json");
-        let raw: ParallelFinishedSimulation = load(&path).unwrap();
-        let report: ParallelSimulationReport = raw.report();
-        // println!("{}", report);
-
-        let dose1 = UncertainF64::from_value_rstd(1.2027e-14, 6.940 / 100.);
-        let dose2 = UncertainF64::from_value_rstd(1.1735e-14, 6.850 / 100.);
-        let dose3 = UncertainF64::from_value_rstd(1.3713e-14, 7.010 / 100.);
-        let dose4 = UncertainF64::from_value_rstd(1.3646e-14, 6.552 / 100.);
-        let dose5 = UncertainF64::from_value_rstd(1.2904e-14, 6.927 / 100.);
-        let dose6 = UncertainF64::from_value_rstd(1.2592e-14, 7.217 / 100.);
-        let dose7 = UncertainF64::from_value_rstd(1.1982e-14, 6.917 / 100.);
-        let dose8 = UncertainF64::from_value_rstd(1.2596e-14, 7.158 / 100.);
-        let dose_combined = UncertainF64::from_value_var(1. / 8., 0.)
-            * (dose1 + dose2 + dose3 + dose4 + dose5 + dose6 + dose7 + dose8);
-
-        let dose_reported = report.dose.into_result().unwrap().first().unwrap().1;
-        assert_approx_eq!(dose_reported.value(), dose_combined.value());
-        assert_approx_eq!(dose_reported.rstd(), dose_combined.rstd());
-    }
-}
-
 impl fmt::Display for ParallelSimulationReport {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "######## Input #######")?;
@@ -419,5 +381,35 @@ impl fmt::Display for SingleSimulation {
         writeln!(f, "Application: {}", self.application)?;
         writeln!(f, "Pegsfile: {}", self.pegsfile)?;
         write!(f, "Checksum: {}", self.checksum)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use util::{asset_path, load};
+    use uncertain::UncertainF64;
+
+    #[test]
+    fn test_report_par_sim() {
+        let path = asset_path().join("fin_par_sim.json");
+        let raw: ParallelFinishedSimulation = load(&path).unwrap();
+        let report: ParallelSimulationReport = raw.report();
+        // println!("{}", report);
+
+        let dose1 = UncertainF64::from_value_rstd(1.2027e-14, 6.940 / 100.);
+        let dose2 = UncertainF64::from_value_rstd(1.1735e-14, 6.850 / 100.);
+        let dose3 = UncertainF64::from_value_rstd(1.3713e-14, 7.010 / 100.);
+        let dose4 = UncertainF64::from_value_rstd(1.3646e-14, 6.552 / 100.);
+        let dose5 = UncertainF64::from_value_rstd(1.2904e-14, 6.927 / 100.);
+        let dose6 = UncertainF64::from_value_rstd(1.2592e-14, 7.217 / 100.);
+        let dose7 = UncertainF64::from_value_rstd(1.1982e-14, 6.917 / 100.);
+        let dose8 = UncertainF64::from_value_rstd(1.2596e-14, 7.158 / 100.);
+        let dose_combined = UncertainF64::from_value_var(1. / 8., 0.)
+            * (dose1 + dose2 + dose3 + dose4 + dose5 + dose6 + dose7 + dose8);
+
+        let dose_reported = report.dose.into_result().unwrap().first().unwrap().1;
+        assert_relative_eq!(dose_reported.value(), dose_combined.value());
+        assert_relative_eq!(dose_reported.rstd(), dose_combined.rstd());
     }
 }

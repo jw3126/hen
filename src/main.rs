@@ -4,9 +4,16 @@ extern crate rayon;
 extern crate regex;
 extern crate sha3;
 
-#[allow(unused_imports)]
-#[macro_use]
+#[cfg(test)]
 extern crate assert_cli;
+
+#[cfg(test)]
+#[macro_use]
+extern crate approx;
+
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
 
 #[macro_use]
 extern crate clap;
