@@ -27,7 +27,7 @@ impl Token {
             return Ok(sp.unwrap());
         };
         let msg = format!("Cannot parse {}", s.to_string());
-        return Err(msg);
+        Err(msg)
     }
 
     fn parse_start(s: &str) -> Option<Token> {
@@ -69,7 +69,7 @@ impl Token {
             Token::Stop(s) => format!(":stop {}:", s),
             Token::KeyValue(k, v) => format!("{} = {}", k, v),
         };
-        return s;
+        s
     }
 
     pub fn to_string_indent(self: Token, indent: usize) -> (String, usize) {
@@ -80,7 +80,7 @@ impl Token {
         };
         let ws = "    ".repeat(i_current);
         let s = format!("{}{}", ws, self._to_string());
-        return (s, i_next);
+        (s, i_next)
     }
 
     pub fn value(&self) -> Option<&String> {
@@ -105,7 +105,7 @@ impl TokenStream {
             indent = i;
             lines.push(line);
         }
-        return lines.join("\n");
+        lines.join("\n")
     }
 
     pub fn parse_reader(reader: &mut BufRead) -> Result<TokenStream> {
@@ -119,7 +119,7 @@ impl TokenStream {
             tokens.push(t);
         }
         let stream = TokenStream { tokens };
-        return Ok(stream);
+        Ok(stream)
     }
     pub fn parse_string(s: &str) -> Result<TokenStream> {
         let mut reader = BufReader::new(s.as_bytes());
@@ -141,18 +141,18 @@ impl TokenStream {
                 _ => {}
             }
         }
-        return ret;
+        ret
     }
 
     fn find_index_single(&self, key: &str) -> Option<usize> {
         let xs = self.find_index(key);
         let x = single(&xs)?;
-        return Some(*x);
+        Some(*x)
     }
 
     fn get_index(&self, index: usize) -> &Token {
         let t = &self.tokens[index];
-        return t;
+        t
     }
 
     pub fn split(&self, seeds: &Vec<(usize, usize)>) -> Vec<TokenStream> {
@@ -190,16 +190,16 @@ impl TokenStream {
         let &(s1, s2) = seed;
         ret.tokens[index_seed] =
             Token::KeyValue("initial seeds".to_string(), format!("{} {}", s1, s2));
-        return ret;
+        ret
     }
 }
 
 fn single<T>(v: &[T]) -> Option<&T> {
     if v.len() == 1 {
         let x = v.first();
-        return x;
+        x
     } else {
-        return None;
+        None
     }
 }
 
@@ -211,9 +211,9 @@ fn read_clean_line(reader: &mut BufRead) -> Result<String> {
     let line = line.split('#').next().unwrap();
     let line = line.trim();
     if line == "" {
-        return read_clean_line(reader);
+        read_clean_line(reader)
     } else {
-        return Ok(line.to_string());
+        Ok(line.to_string())
     }
 }
 
