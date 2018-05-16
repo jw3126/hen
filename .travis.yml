@@ -28,8 +28,8 @@ install:
   - cd ..
 
 script:
-  - export EGS_HOME=/home/travis/build/jw3126/hen/EGSnrc/egs_home
+  - export EGS_HOME=/home/travis/build/jw3126/hen/EGSnrc/egs_home/
   - export EGS_CONFIG=/home/travis/build/jw3126/hen/EGSnrc/HEN_HOUSE/specs/linux.conf
-  - source /home/travis/jw3126/hen/EGSnrc/HEN_HOUSE/scripts/egsnrc_bashrc_additions
+  - source /home/travis/build/jw3126/hen/EGSnrc/HEN_HOUSE/scripts/egsnrc_bashrc_additions
   - cargo build --verbose --all
   - cargo test --verbose --all
