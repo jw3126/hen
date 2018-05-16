@@ -12,6 +12,22 @@ matrix:
   fast_finish: true
 cache: cargo
 
+addons:
+  apt:
+    packages:
+      - gfortran
+      - gcc
+      - g++
+      - expect
+      - git
+
+install:
+  - git clone https://github.com/nrc-cnrc/EGSnrc .
+  - HEN_HOUSE/scripts/configure.expect linux.conf | tee configure.log
+
 script:
+  - export EGS_HOME=/home/travis/build/nrc-cnrc/EGSnrc/egs_home
+  - export EGS_CONFIG=/home/travis/build/nrc-cnrc/EGSnrc/HEN_HOUSE/specs/linux.conf
+  - source /home/travis/build/nrc-cnrc/EGSnrc/HEN_HOUSE/scripts/egsnrc_bashrc_additions
   - cargo build --verbose --all
   - cargo test --verbose --all
