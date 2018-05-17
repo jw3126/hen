@@ -31,6 +31,7 @@ impl UncertainF64 {
         self.value
     }
 
+    #[allow(dead_code)]
     pub fn from_value(value: f64) -> Self {
         Self::from_value_var(value, 0.)
     }
@@ -45,6 +46,7 @@ impl UncertainF64 {
         Self::from_value_var(value, var)
     }
 
+    #[allow(dead_code)]
     pub fn from_value_var(value: f64, var: f64) -> Self {
         let rstd = var.sqrt() / value;
         Self { value, rstd }

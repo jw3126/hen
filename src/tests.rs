@@ -99,6 +99,7 @@ mod tests {
 
         assert!(r1 != r2);
         assert_eq!(r1.dose, r2.dose);
+        r1.dose.into_result().unwrap();
         fs::remove_file(&output_path1).unwrap();
         fs::remove_file(&output_path2).unwrap();
     }

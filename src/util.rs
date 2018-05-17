@@ -27,7 +27,7 @@ where
 pub fn debug_string<E: Debug>(e: E) -> String {
     format!("{:?}", e)
 }
-
+#[allow(dead_code)]
 pub fn asset_path() -> PathBuf {
     let filepath = Path::new(file!())
         .parent()

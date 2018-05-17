@@ -81,7 +81,7 @@ pub struct ParallelSimulation {
 impl ParallelSimulation {
     pub fn run(&self) -> Result<ParallelFinishedSimulation> {
         let stream = TokenStream::parse_string(&(self.prototype.input_content))?;
-        let streams = stream.split(&self.seeds);
+        let streams = stream.split(&self.seeds)?;
         let application = &self.prototype.application;
         let pegsfile = &self.prototype.pegsfile;
         let create_sim = |content: String| {
@@ -144,25 +144,36 @@ impl SingleSimulation {
     }
 
     fn run_cmd(&self) -> std::io::Result<Output> {
-        let mut file = fs::File::create(self.exec_path())?;
+        let mut file = fs::File::create(self.path_exec_with_ext("egsinp"))?;
         file.write_all(self.input_content.as_bytes()).unwrap();
 
         let ret = Command::new(self.application.clone())
             .args(&["-i", self.checksum.as_str(), "-p", self.pegsfile.as_str()])
             .output();
 
-        // TODO cleanup
         return ret;
     }
 
     pub fn run(self: SingleSimulation) -> FinishedSimulation {
         let out = self.run_cmd().unwrap();
-        FinishedSimulation {
-            input: self,
+        let ret = FinishedSimulation {
+            input: self.clone(),
             stdout: String::from_utf8_lossy(&out.stdout).to_string(),
             stderr: String::from_utf8_lossy(&out.stderr).to_string(),
             exit_status: out.status.code().unwrap_or(-1),
+        };
+        self.cleanup();
+        ret
+    }
+
+    pub fn cleanup(&self) -> () {
+        for ext in ["egsinp", "egsdat", "ptracks"].iter() {
+            let path = self.path_exec_with_ext(&ext);
+            if path.exists() {
+                let _ = fs::remove_file(path);
+            }
         }
+
     }
 
     fn app_dir(&self) -> PathBuf {
@@ -171,9 +182,10 @@ impl SingleSimulation {
         path
     }
 
-    fn exec_path(&self) -> PathBuf {
+    fn path_exec_with_ext(&self, ext:&str) -> PathBuf {
         let mut path = self.app_dir();
-        path.push(format!("{}{}", self.checksum, ".egsinp"));
+        path.push(&self.checksum);
+        assert!(path.set_extension(ext));
         path
     }
 

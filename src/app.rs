@@ -2,7 +2,7 @@ use clap::{Arg, ArgMatches, SubCommand};
 use clap;
 use std::path::{Path, PathBuf};
 use num_cpus;
-use simulation::{ParallelSimulation, ParallelSimulationReport, SingleSimulation};
+use simulation::{ParallelSimulationReport, SingleSimulation};
 use std::env::current_dir;
 use util::{debug_string, load, save, Result};
 use std::fs;
@@ -14,7 +14,7 @@ use std;
 use std::ffi::OsStr;
 
 fn create_app() -> clap::App<'static, 'static> {
-    clap::App::new("egscli")
+    clap::App::new("hen")
         .author(crate_authors!())
         .version(crate_version!())
         .about("Run .egsinp files from anywhere.")
