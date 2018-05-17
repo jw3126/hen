@@ -312,6 +312,7 @@ impl RunConfig {
             .splitn(self.nthreads)
             .run()?
             .report();
+        println!("{}", out);
         save(output_path, &out)
     }
 

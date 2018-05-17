@@ -154,7 +154,7 @@ impl SingleSimulation {
         return ret;
     }
 
-    pub fn run(self: SingleSimulation) -> FinishedSimulation {
+    pub fn run(&self) -> FinishedSimulation {
         let out = self.run_cmd().unwrap();
         let ret = FinishedSimulation {
             input: self.clone(),
