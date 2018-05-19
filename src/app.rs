@@ -76,6 +76,13 @@ fn create_app() -> clap::App<'static, 'static> {
                     Arg::with_name("PATH")
                         .help("Path to a .json file containing simulation report.")
                         .index(1),
+                )
+                .arg(
+                    Arg::with_name("WHAT")
+                        .help("Show which aspects of the report")
+                        .index(2)
+                        .default_value("smart")
+                        // .takes_value(true)
                 ),
         )
         .subcommand(
@@ -248,21 +255,39 @@ impl ViewConfig {
     }
 }
 
+arg_enum!{
+    #[derive(PartialEq, Debug)]
+    pub enum ShowWhat {
+        Output,
+        Input,
+        All,
+        Smart
+    }
+}
+
 #[derive(Debug)]
 struct ShowConfig {
     path: PathBuf,
+    what: ShowWhat
 }
 
 impl SubCmd for ShowConfig {
     fn parse(matches: &ArgMatches) -> Result<ShowConfig> {
         let spath = matches.value_of("PATH").unwrap();
         let path = abspath_from_string(spath)?;
-        Ok(ShowConfig { path })
+        let what = value_t!(matches, "WHAT", ShowWhat).map_err(debug_string)?;
+        Ok(ShowConfig { path, what})
     }
 
     fn run(&self) -> Result<()> {
-        let report: ParallelSimulationReport = load(&self.path)?;
-        Ok(println!("{}", report))
+        let r: ParallelSimulationReport = load(&self.path)?;
+        let s = match self.what {
+            ShowWhat::Smart  => r.to_string_smart(),
+            ShowWhat::All    => r.to_string_all(),
+            ShowWhat::Input  => r.to_string_input(),
+            ShowWhat::Output => r.to_string_output(),
+        };
+        Ok(println!("{}", s))
     }
 }
 
