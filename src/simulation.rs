@@ -154,7 +154,7 @@ impl SingleSimulation {
         return ret;
     }
 
-    pub fn run(self: SingleSimulation) -> FinishedSimulation {
+    pub fn run(&self) -> FinishedSimulation {
         let out = self.run_cmd().unwrap();
         let ret = FinishedSimulation {
             input: self.clone(),
@@ -348,42 +348,81 @@ impl ParallelFinishedSimulation {
     }
 }
 
-impl fmt::Display for ParallelSimulationReport {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "######## Input #######")?;
-        writeln!(f, "{}", self.input.prototype)?;
+impl ParallelSimulationReport {
 
-        writeln!(f, "")?;
-        writeln!(f, "######## Output #######")?;
+    pub fn to_string_smart(&self) -> String {
+        format!("{}",self)
+    }
 
-        match self.total_cpu_time {
-            Omitable::Available(ref t) => writeln!(f, "Total cpu time: {}", t),
-            Omitable::Omitted => Ok(()),
-            Omitable::Fail(ref s) => writeln!(f, "{}", s),
-        }?;
+    pub fn to_string_all(&self) -> String {
+        let mut ret = String::new();
+        ret.push_str(&Self::string_section("Output"));
+        ret.push_str(&self.to_string_input());
+        ret.push_str("\n");
+        ret.push_str(&Self::string_section("Output"));
+        ret.push_str(&self.to_string_output());
+        ret
+    }
 
-        match self.simulation_finished {
-            Omitable::Available(ref t) => writeln!(f, "Simulation finished: {}", t),
-            Omitable::Omitted => Ok(()),
-            Omitable::Fail(ref s) => writeln!(f, "{}", s),
-        }?;
+    pub fn string_section(title:&str) -> String {
+        format!("\n{:#^width$}\n"," ".to_string() + title + " ", width=50)
+    }
 
-        writeln!(f, "")?;
-        writeln!(f, "######## Dose ######")?;
+    pub fn to_string_input(&self) -> String {
+        self.string_input()
+    }
 
+    pub fn to_string_output(&self) -> String {
+        let mut ret = String::new();
+        ret.push_str(&self.string_total_cpu_time());
+        ret.push_str(&"\n");
+        ret.push_str(&self.string_simulation_finished());
+        ret.push_str(&"\n");
+        ret.push_str(&self.string_dose());
+        ret.push_str(&"\n");
+        ret
+    }
+
+    fn string_dose(&self) -> String {
+        let mut ret = String::new();
         match self.dose {
             Omitable::Available(ref v) => {
                 for &(ref name, score) in v {
                     let value = score.value();
                     let pstd = score.rstd() * 100.;
-                    writeln!(f, "{}: {} +- {}%", name, value, pstd)?;
+                    ret.push_str(&format!("{}: {} +- {}%\n", name, value, pstd));
                 }
-                write!(f, "")
             }
-            Omitable::Omitted => Ok(()),
-            Omitable::Fail(ref s) => writeln!(f, "{}", s),
-        }?;
-        Ok(())
+            Omitable::Omitted => {},
+            Omitable::Fail(ref s) => ret.push_str(&format!("{}", s)),
+        };
+        ret
+    }
+
+    fn string_key_omittable<T:fmt::Display>(key:&str, val:&Omitable<T>) -> String {
+        match  val {
+            &Omitable::Available(ref t) => format!("{}: {}", key, t),
+            &Omitable::Omitted => "".to_string(),
+            &Omitable::Fail(ref msg) => format!("{}: {}", key, msg),
+        }
+    }
+
+    fn string_total_cpu_time(&self) -> String {
+        Self::string_key_omittable("Total cpu time", &self.total_cpu_time)
+    }
+
+    fn string_simulation_finished(&self) -> String {
+        Self::string_key_omittable("Simulation finished", &self.simulation_finished)
+    }
+
+    fn string_input(&self) -> String {
+        format!("{}", self.input.prototype)
+    }
+}
+
+impl fmt::Display for ParallelSimulationReport {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{}", self.to_string_all())
     }
 }
 
