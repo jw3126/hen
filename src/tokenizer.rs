@@ -1,7 +1,7 @@
 use std::io::{BufRead, BufReader};
 use std::option::Option;
 use std::iter::Iterator;
-use util::{Result,debug_string};
+use util::{debug_string, Result};
 
 use regex::Regex;
 
@@ -157,12 +157,14 @@ impl TokenStream {
 
     pub fn split(&self, seeds: &Vec<(usize, usize)>) -> Result<Vec<TokenStream>> {
         let index_ncase = self.find_index_single("ncase").ok_or("Cannot find ncase")?;
-        let sncase = self.get_index(index_ncase).value().ok_or("Cannor parse ncase")?;
+        let sncase = self.get_index(index_ncase)
+            .value()
+            .ok_or("Cannor parse ncase")?;
         let ncase: usize = str::parse(&sncase).map_err(debug_string)?;
         let k = seeds.len();
         let ncase_new = ncase / k;
         assert!(ncase_new > 0);
-        let ncases:Vec<usize> = vec![ncase_new; k]; // TODO missing cases
+        let ncases: Vec<usize> = vec![ncase_new; k]; // TODO missing cases
 
         let ret = ncases
             .iter()
@@ -183,9 +185,7 @@ impl TokenStream {
 
     fn with_seed_and_ncase(&self, ncase_new: usize, seed: &(usize, usize)) -> Result<TokenStream> {
         let mut ret = self.clone();
-        let index_ncase = self
-            .find_index_single("ncase")
-            .ok_or("Cannot find ncase")?;
+        let index_ncase = self.find_index_single("ncase").ok_or("Cannot find ncase")?;
         let index_seed = self.find_index_single("initial seeds")
             .ok_or("Cannot find initial seeds")?;
         ret.tokens[index_ncase] = Token::KeyValue("ncase".to_string(), format!("{}", ncase_new));

@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use util::{asset_path, load};
-    use simulation::ParallelSimulationReport;
+    use simulation::ParSimReport;
     use assert_cli;
     use rand;
     use rand::Rng;
@@ -22,7 +22,7 @@ mod tests {
             .with_args(&["run", sinput_path, "-o", soutput_path])
             .unwrap();
 
-        let r: ParallelSimulationReport = load(&output_path).unwrap();
+        let r: ParSimReport = load(&output_path).unwrap();
         let doses = r.dose.into_result().unwrap();
         assert_eq!(doses.len(), 3);
         let (ref geo0, dose0) = doses[0];
@@ -64,11 +64,11 @@ mod tests {
             .with_args(&["run", sinput_path_many, "-o", soutput_path_many])
             .unwrap();
 
-        let r1: ParallelSimulationReport = load(&output_path1).unwrap();
-        let r2: ParallelSimulationReport = load(&output_path2).unwrap();
+        let r1: ParSimReport = load(&output_path1).unwrap();
+        let r2: ParSimReport = load(&output_path2).unwrap();
 
-        let m1: ParallelSimulationReport = load(&output_path_many1).unwrap();
-        let m2: ParallelSimulationReport = load(&output_path_many2).unwrap();
+        let m1: ParSimReport = load(&output_path_many1).unwrap();
+        let m2: ParSimReport = load(&output_path_many2).unwrap();
         assert_eq!(r1.dose, m1.dose);
         assert_eq!(r2.dose, m2.dose);
         assert!(r1 != m1);
@@ -94,8 +94,8 @@ mod tests {
             .with_args(&["rerun", soutput_path1, "-o", soutput_path2])
             .unwrap();
 
-        let r1: ParallelSimulationReport = load(&output_path1).unwrap();
-        let r2: ParallelSimulationReport = load(&output_path2).unwrap();
+        let r1: ParSimReport = load(&output_path1).unwrap();
+        let r2: ParSimReport = load(&output_path2).unwrap();
 
         assert!(r1 != r2);
         assert_eq!(r1.dose, r2.dose);

@@ -16,7 +16,7 @@ use util::Result;
 use std::result::Result as StdResult;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SingleSimulation {
+pub struct SingSimInput {
     pub application: String,
     pub input_content: String,
     pub pegsfile: String,
@@ -24,8 +24,14 @@ pub struct SingleSimulation {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct FinishedSimulation {
-    pub input: SingleSimulation,
+pub struct ParSimInput {
+    pub prototype: SingSimInput,
+    pub seeds: Vec<(usize, usize)>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SingSimFinished {
+    pub input: SingSimInput,
     pub stderr: String,
     pub stdout: String,
     pub exit_status: i32,
@@ -39,15 +45,15 @@ pub enum Omitable<T> {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SingleSimulationParsedOutput {
+pub struct SingSimParsedOutput {
     pub dose: Result<Vec<(String, UncertainF64)>>,
     pub total_cpu_time: Result<f64>,
     pub simulation_finished: Result<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct SingleSimulationReport {
-    pub input: SingleSimulation,
+pub struct SingSimReport {
+    pub input: SingSimInput,
     pub stderr: Omitable<String>,
     pub stdout: Omitable<String>,
     pub exit_status: Omitable<i32>,
@@ -57,43 +63,37 @@ pub struct SingleSimulationReport {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParallelFinishedSimulation {
-    pub input: ParallelSimulation,
-    pub outputs: Vec<FinishedSimulation>,
+pub struct ParSimFinished {
+    pub input: ParSimInput,
+    pub outputs: Vec<SingSimFinished>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParallelSimulationReport {
-    pub input: ParallelSimulation,
-    pub outputs: Omitable<Vec<SingleSimulationReport>>,
+pub struct ParSimReport {
+    pub input: ParSimInput,
+    pub outputs: Omitable<Vec<SingSimReport>>,
 
     pub total_cpu_time: Omitable<f64>,
     pub simulation_finished: Omitable<bool>,
     pub dose: Omitable<Vec<(String, UncertainF64)>>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParallelSimulation {
-    pub prototype: SingleSimulation,
-    pub seeds: Vec<(usize, usize)>,
-}
-
-impl ParallelSimulation {
-    pub fn run(&self) -> Result<ParallelFinishedSimulation> {
+impl ParSimInput {
+    pub fn run(&self) -> Result<ParSimFinished> {
         let stream = TokenStream::parse_string(&(self.prototype.input_content))?;
         let streams = stream.split(&self.seeds)?;
         let application = &self.prototype.application;
         let pegsfile = &self.prototype.pegsfile;
         let create_sim = |content: String| {
-            SingleSimulation::new(application.clone(), content.clone(), pegsfile.clone())
+            SingSimInput::new(application.clone(), content.clone(), pegsfile.clone())
         };
-        let results: Vec<FinishedSimulation> = streams
+        let results: Vec<SingSimFinished> = streams
             .par_iter()
             .map(|s| s.to_string())
             .map(create_sim)
             .map(|sim| sim.clone().run())
             .collect();
-        let ret = ParallelFinishedSimulation {
+        let ret = ParSimFinished {
             input: self.clone(),
             outputs: results,
         };
@@ -118,11 +118,11 @@ fn generate_seeds(n: usize) -> Vec<Seed> {
     return seeds;
 }
 
-impl SingleSimulation {
+impl SingSimInput {
     pub fn new(application: String, input_content: String, pegsfile: String) -> Self {
         let digest = sha3::Sha3_256::digest(input_content.as_bytes());
         let checksum = format!("{:x}", digest);
-        let sim = SingleSimulation {
+        let sim = SingSimInput {
             application,
             input_content,
             pegsfile,
@@ -154,9 +154,9 @@ impl SingleSimulation {
         return ret;
     }
 
-    pub fn run(&self) -> FinishedSimulation {
+    pub fn run(&self) -> SingSimFinished {
         let out = self.run_cmd().unwrap();
-        let ret = FinishedSimulation {
+        let ret = SingSimFinished {
             input: self.clone(),
             stdout: String::from_utf8_lossy(&out.stdout).to_string(),
             stderr: String::from_utf8_lossy(&out.stderr).to_string(),
@@ -173,7 +173,6 @@ impl SingleSimulation {
                 let _ = fs::remove_file(path);
             }
         }
-
     }
 
     fn app_dir(&self) -> PathBuf {
@@ -182,19 +181,19 @@ impl SingleSimulation {
         path
     }
 
-    fn path_exec_with_ext(&self, ext:&str) -> PathBuf {
+    fn path_exec_with_ext(&self, ext: &str) -> PathBuf {
         let mut path = self.app_dir();
         path.push(&self.checksum);
         assert!(path.set_extension(ext));
         path
     }
 
-    pub fn split(self, seeds: Vec<Seed>) -> ParallelSimulation {
+    pub fn split(self, seeds: Vec<Seed>) -> ParSimInput {
         let prototype = self;
-        return ParallelSimulation { seeds, prototype };
+        return ParSimInput { seeds, prototype };
     }
 
-    pub fn splitn(self, n: usize) -> ParallelSimulation {
+    pub fn splitn(self, n: usize) -> ParSimInput {
         let seeds = generate_seeds(n);
         return self.split(seeds);
     }
@@ -243,15 +242,15 @@ impl<T> Omitable<T> {
     }
 }
 
-impl FinishedSimulation {
-    fn parse_output(&self) -> SingleSimulationParsedOutput {
+impl SingSimFinished {
+    fn parse_output(&self) -> SingSimParsedOutput {
         let mut reader = BufReader::new(self.stdout.as_bytes());
         return output_parser::parse_simulation_output(&mut reader);
     }
 
-    pub fn report(&self) -> SingleSimulationReport {
+    pub fn report(&self) -> SingSimReport {
         let out = self.parse_output();
-        SingleSimulationReport {
+        SingSimReport {
             input: self.input.clone(),
             stderr: Omitable::Available(self.stderr.clone()),
             stdout: Omitable::Available(self.stdout.clone()),
@@ -271,13 +270,11 @@ fn traverse_result<T, E>(iter: Vec<StdResult<T, E>>) -> StdResult<Vec<T>, E> {
     Ok(ret)
 }
 
-impl ParallelFinishedSimulation {
-    pub fn report(&self) -> ParallelSimulationReport {
+impl ParSimFinished {
+    pub fn report(&self) -> ParSimReport {
         // util::save(Path::new("fin_par_sim.json"), self);
-        let outputs: Vec<SingleSimulationReport> = self.outputs
-            .iter()
-            .map(FinishedSimulation::report)
-            .collect();
+        let outputs: Vec<SingSimReport> =
+            self.outputs.iter().map(SingSimFinished::report).collect();
         let total_cpu_time = outputs
             .iter()
             .map(|o| o.total_cpu_time.clone())
@@ -296,7 +293,7 @@ impl ParallelFinishedSimulation {
 
         // util::save(&Path::new("test_data/asdf.json"),self);
 
-        ParallelSimulationReport {
+        ParSimReport {
             input: self.input.clone(),
             outputs: Omitable::Available(outputs),
             total_cpu_time,
@@ -305,7 +302,7 @@ impl ParallelFinishedSimulation {
         }
     }
 
-    fn compute_dose(reports: &[SingleSimulationReport]) -> Result<Vec<(String, UncertainF64)>> {
+    fn compute_dose(reports: &[SingSimReport]) -> Result<Vec<(String, UncertainF64)>> {
         let doses1: Vec<Result<Vec<(String, UncertainF64)>>> = reports
             .iter()
             .map(|o| o.dose.clone().into_result())
@@ -348,10 +345,9 @@ impl ParallelFinishedSimulation {
     }
 }
 
-impl ParallelSimulationReport {
-
+impl ParSimReport {
     pub fn to_string_smart(&self) -> String {
-        format!("{}",self)
+        format!("{}", self)
     }
 
     pub fn to_string_all(&self) -> String {
@@ -364,8 +360,8 @@ impl ParallelSimulationReport {
         ret
     }
 
-    pub fn string_section(title:&str) -> String {
-        format!("\n{:#^width$}\n"," ".to_string() + title + " ", width=50)
+    pub fn string_section(title: &str) -> String {
+        format!("\n{:#^width$}\n", " ".to_string() + title + " ", width = 50)
     }
 
     pub fn to_string_input(&self) -> String {
@@ -386,21 +382,19 @@ impl ParallelSimulationReport {
     fn string_dose(&self) -> String {
         let mut ret = String::new();
         match self.dose {
-            Omitable::Available(ref v) => {
-                for &(ref name, score) in v {
-                    let value = score.value();
-                    let pstd = score.rstd() * 100.;
-                    ret.push_str(&format!("{}: {} +- {}%\n", name, value, pstd));
-                }
-            }
-            Omitable::Omitted => {},
+            Omitable::Available(ref v) => for &(ref name, score) in v {
+                let value = score.value();
+                let pstd = score.rstd() * 100.;
+                ret.push_str(&format!("{}: {} +- {}%\n", name, value, pstd));
+            },
+            Omitable::Omitted => {}
             Omitable::Fail(ref s) => ret.push_str(&format!("{}", s)),
         };
         ret
     }
 
-    fn string_key_omittable<T:fmt::Display>(key:&str, val:&Omitable<T>) -> String {
-        match  val {
+    fn string_key_omittable<T: fmt::Display>(key: &str, val: &Omitable<T>) -> String {
+        match val {
             &Omitable::Available(ref t) => format!("{}: {}", key, t),
             &Omitable::Omitted => "".to_string(),
             &Omitable::Fail(ref msg) => format!("{}: {}", key, msg),
@@ -420,13 +414,13 @@ impl ParallelSimulationReport {
     }
 }
 
-impl fmt::Display for ParallelSimulationReport {
+impl fmt::Display for ParSimReport {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.to_string_all())
     }
 }
 
-impl fmt::Display for SingleSimulation {
+impl fmt::Display for SingSimInput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.input_content)?;
         writeln!(f, "Application: {}", self.application)?;
@@ -444,8 +438,8 @@ mod tests {
     #[test]
     fn test_report_par_sim() {
         let path = asset_path().join("fin_par_sim.json");
-        let raw: ParallelFinishedSimulation = load(&path).unwrap();
-        let report: ParallelSimulationReport = raw.report();
+        let raw: ParSimFinished = load(&path).unwrap();
+        let report: ParSimReport = raw.report();
         // println!("{}", report);
 
         let dose1 = UncertainF64::from_value_rstd(1.2027e-14, 6.940 / 100.);

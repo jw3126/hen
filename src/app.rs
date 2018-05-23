@@ -2,7 +2,7 @@ use clap::{Arg, ArgMatches, SubCommand};
 use clap;
 use std::path::{Path, PathBuf};
 use num_cpus;
-use simulation::{ParallelSimulationReport, SingleSimulation};
+use simulation::{ParSimReport, SingSimInput};
 use std::env::current_dir;
 use util::{debug_string, load, save, Result};
 use std::fs;
@@ -174,7 +174,7 @@ impl SubCmd for RerunConfig {
     }
 
     fn run(&self) -> Result<()> {
-        let report: ParallelSimulationReport = load(&self.path)?;
+        let report: ParSimReport = load(&self.path)?;
         let sim = report.input;
         let out = sim.run()?.report();
         save(&self.outputpath, &out)?;
@@ -222,7 +222,7 @@ impl SubCmd for ViewConfig {
 
 impl ViewConfig {
     fn run_json(&self) -> Result<()> {
-        let report: ParallelSimulationReport = load(&self.path)?;
+        let report: ParSimReport = load(&self.path)?;
         let input_content = report.input.prototype.input_content;
         let filestem = report.input.prototype.checksum;
         let filename = format!("{}.egsinp", filestem);
@@ -262,7 +262,7 @@ arg_enum!{
 #[derive(Debug)]
 struct ShowConfig {
     path: PathBuf,
-    what: ShowWhat
+    what: ShowWhat,
 }
 
 impl SubCmd for ShowConfig {
@@ -270,15 +270,15 @@ impl SubCmd for ShowConfig {
         let spath = matches.value_of("PATH").unwrap();
         let path = abspath_from_string(spath)?;
         let what = value_t!(matches, "WHAT", ShowWhat).map_err(debug_string)?;
-        Ok(ShowConfig { path, what})
+        Ok(ShowConfig { path, what })
     }
 
     fn run(&self) -> Result<()> {
-        let r: ParallelSimulationReport = load(&self.path)?;
+        let r: ParSimReport = load(&self.path)?;
         let s = match self.what {
-            ShowWhat::Smart  => r.to_string_smart(),
-            ShowWhat::All    => r.to_string_all(),
-            ShowWhat::Input  => r.to_string_input(),
+            ShowWhat::Smart => r.to_string_smart(),
+            ShowWhat::All => r.to_string_all(),
+            ShowWhat::Input => r.to_string_input(),
             ShowWhat::Output => r.to_string_output(),
         };
         Ok(println!("{}", s))
@@ -317,8 +317,8 @@ impl RunConfig {
         }
     }
 
-    fn create_single_simulation(&self, input_path: &Path) -> Result<SingleSimulation> {
-        SingleSimulation::from_egsinp_path(&self.application, input_path, &self.pegsfile)
+    fn create_single_simulation(&self, input_path: &Path) -> Result<SingSimInput> {
+        SingSimInput::from_egsinp_path(&self.application, input_path, &self.pegsfile)
     }
 
     fn run_egsinp(&self, input_path: &Path, output_path: &Path) -> Result<()> {

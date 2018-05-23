@@ -1,7 +1,7 @@
 use std::io::BufRead;
 use regex::Regex;
 use uncertain::UncertainF64;
-use simulation::SingleSimulationParsedOutput;
+use simulation::SingSimParsedOutput;
 use util::Result;
 
 fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
@@ -97,7 +97,7 @@ fn test_parse_geometry_dose() {
     );
 }
 
-pub fn parse_simulation_output(reader: &mut BufRead) -> SingleSimulationParsedOutput {
+pub fn parse_simulation_output(reader: &mut BufRead) -> SingSimParsedOutput {
     let re = Regex::new("^==(=*)").unwrap();
     read_line_until(reader, &re);
     read_line_until(reader, &re);
@@ -151,7 +151,7 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> SingleSimulationParsedOu
     // parse_geometry_dose
     mline = read_line_until(reader, &Regex::new("finishSimulation").unwrap());
     let simulation_finished = match mline {
-        None => Err("Cannot find FinishedSimulation".to_string()),
+        None => Err("Cannot find SingSimFinished".to_string()),
         Some(_) => {
             if read_line(reader) == None {
                 Ok(true)
@@ -160,7 +160,7 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> SingleSimulationParsedOu
             }
         }
     };
-    return SingleSimulationParsedOutput {
+    return SingSimParsedOutput {
         dose,
         total_cpu_time,
         simulation_finished,
