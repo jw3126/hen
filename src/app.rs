@@ -31,12 +31,6 @@ fn create_app() -> clap::App<'static, 'static> {
                         .help("Name of the input file."),
                 )
                 .arg(
-                    Arg::with_name("FORCE")
-                        .short("f")
-                        .long("force")
-                        .help("Overwrite existing input/output files."),
-                )
-                .arg(
                     Arg::with_name("PEGSFILE")
                         .short("p")
                         .long("pegsfile")
@@ -82,7 +76,7 @@ fn create_app() -> clap::App<'static, 'static> {
                         .help("Show which aspects of the report")
                         .index(2)
                         .default_value("smart")
-                        // .takes_value(true)
+                        .case_insensitive(true)
                 ),
         )
         .subcommand(
@@ -297,7 +291,6 @@ struct RunConfig {
     application: String,
     outputpath: PathBuf,
     pegsfile: String,
-    force: bool,
     nthreads: usize,
     dir: bool, // run all files in a directory
 }
@@ -372,7 +365,6 @@ impl RunConfig {
 
 impl SubCmd for RunConfig {
     fn parse(matches: &ArgMatches) -> Result<RunConfig> {
-        let force = matches.is_present("FORCE");
         let sinputpath = matches.value_of("INPUT").unwrap();
         let inputpath = abspath_from_string(sinputpath)?;
         let dir = inputpath.is_dir();
@@ -391,7 +383,6 @@ impl SubCmd for RunConfig {
             application,
             outputpath,
             pegsfile,
-            force,
             nthreads,
             dir,
         };
