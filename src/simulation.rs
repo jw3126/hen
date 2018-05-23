@@ -27,6 +27,7 @@ pub struct SingSimInput {
 pub struct ParSimInput {
     pub prototype: SingSimInput,
     pub seeds: Vec<(usize, usize)>,
+    pub ncases: Vec<u64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -81,7 +82,7 @@ pub struct ParSimReport {
 impl ParSimInput {
     pub fn run(&self) -> Result<ParSimFinished> {
         let stream = TokenStream::parse_string(&(self.prototype.input_content))?;
-        let streams = stream.split(&self.seeds)?;
+        let streams = stream.split(&self.seeds, &self.ncases)?;
         let application = &self.prototype.application;
         let pegsfile = &self.prototype.pegsfile;
         let create_sim = |content: String| {
@@ -108,16 +109,7 @@ fn egs_home_path() -> PathBuf {
     path
 }
 
-type Seed = (usize, usize);
-fn generate_seeds(n: usize) -> Vec<Seed> {
-    let mut seeds = Vec::new();
-    for i in 1..(n + 1) {
-        seeds.push((42, i));
-    }
-    assert_eq!(seeds.len(), n);
-    return seeds;
-}
-
+pub type Seed = (usize, usize);
 impl SingSimInput {
     pub fn new(application: String, input_content: String, pegsfile: String) -> Self {
         let digest = sha3::Sha3_256::digest(input_content.as_bytes());
@@ -188,14 +180,18 @@ impl SingSimInput {
         path
     }
 
-    pub fn split(self, seeds: Vec<Seed>) -> ParSimInput {
+    pub fn split(self, seeds: Vec<Seed>, ncases: Vec<u64>)
+        -> ParSimInput {
         let prototype = self;
-        return ParSimInput { seeds, prototype };
+        ParSimInput { seeds, prototype, ncases}
     }
 
-    pub fn splitn(self, n: usize) -> ParSimInput {
-        let seeds = generate_seeds(n);
-        return self.split(seeds);
+    pub fn splitn(self, n: usize) -> Result<ParSimInput> {
+        let stream = TokenStream::parse_string(&(self.input_content))?;
+        let seeds  = stream.generate_seeds(n)?;
+        let ncases = stream.generate_ncases(n)?;
+        let ret = self.split(seeds, ncases);
+        Ok(ret)
     }
 }
 

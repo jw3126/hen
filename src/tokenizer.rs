@@ -2,6 +2,7 @@ use std::io::{BufRead, BufReader};
 use std::option::Option;
 use std::iter::Iterator;
 use util::{debug_string, Result};
+use simulation::{Seed};
 
 use regex::Regex;
 
@@ -150,40 +151,48 @@ impl TokenStream {
         Some(*x)
     }
 
+    pub fn generate_seeds(&self, n: usize) -> Result<Vec<Seed>> {
+        let mut seeds = Vec::new();
+        for i in 1..(n + 1) {
+            seeds.push((42, i));
+        }
+        assert_eq!(seeds.len(), n);
+        Ok(seeds)
+    }
+
+    pub fn generate_ncases(&self, n: usize) -> Result<Vec<u64>> {
+        let n64 = n as u64;
+        let ncase = self.get_ncase()?;
+        let ncase_new = ncase / n64;
+        assert!(ncase_new > 0);
+        let ncases: Vec<u64> = vec![ncase_new; n]; // TODO missing cases
+        Ok(ncases)
+    }
+
     fn get_index(&self, index: usize) -> &Token {
         let t = &self.tokens[index];
         t
     }
 
-    pub fn split(&self, seeds: &Vec<(usize, usize)>) -> Result<Vec<TokenStream>> {
+    pub fn get_ncase(&self) -> Result<u64> {
         let index_ncase = self.find_index_single("ncase").ok_or("Cannot find ncase")?;
         let sncase = self.get_index(index_ncase)
             .value()
             .ok_or("Cannor parse ncase")?;
-        let ncase: usize = str::parse(&sncase).map_err(debug_string)?;
-        let k = seeds.len();
-        let ncase_new = ncase / k;
-        assert!(ncase_new > 0);
-        let ncases: Vec<usize> = vec![ncase_new; k]; // TODO missing cases
+        let ncase: u64 = str::parse(&sncase).map_err(debug_string)?;
+        Ok(ncase)
+    }
 
+    pub fn split(&self, seeds: &Vec<(usize, usize)>, ncases: &Vec<u64>) -> Result<Vec<TokenStream>> {
         let ret = ncases
             .iter()
             .zip(seeds)
-            .map(|(ncase, seed)| self.with_seed_and_ncase(*ncase, seed).unwrap())
+            .map(|(ncase, seed)| self.with_seed_and_ncase(seed, *ncase).unwrap())
             .collect();
         Ok(ret)
     }
 
-    // pub fn splitn(&self, n: usize) -> Vec<TokenStream> {
-    //     let mut seeds = Vec::new();
-    //     for i in 1..(n + 1) {
-    //         seeds.push((42, i));
-    //     }
-    //     assert!(seeds.len() == n);
-    //     return self.split(&seeds);
-    // }
-
-    fn with_seed_and_ncase(&self, ncase_new: usize, seed: &(usize, usize)) -> Result<TokenStream> {
+    fn with_seed_and_ncase(&self, seed: &(usize, usize), ncase_new: u64 ) -> Result<TokenStream> {
         let mut ret = self.clone();
         let index_ncase = self.find_index_single("ncase").ok_or("Cannot find ncase")?;
         let index_seed = self.find_index_single("initial seeds")

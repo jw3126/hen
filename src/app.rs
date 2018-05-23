@@ -327,7 +327,7 @@ impl RunConfig {
             Some(d) => fs::create_dir_all(d).map_err(debug_string)?,
         };
         let out = self.create_single_simulation(input_path)?
-            .splitn(self.nthreads)
+            .splitn(self.nthreads)?
             .run()?
             .report();
         println!("{}", out);
