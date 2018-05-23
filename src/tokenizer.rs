@@ -2,7 +2,7 @@ use std::io::{BufRead, BufReader};
 use std::option::Option;
 use std::iter::Iterator;
 use util::{debug_string, Result};
-use simulation::{Seed};
+use simulation::Seed;
 
 use regex::Regex;
 
@@ -183,7 +183,7 @@ impl TokenStream {
         Ok(ncase)
     }
 
-    pub fn split(&self, seeds: &Vec<(usize, usize)>, ncases: &Vec<u64>) -> Result<Vec<TokenStream>> {
+    pub fn split(&self, seeds: &Vec<Seed>, ncases: &Vec<u64>) -> Result<Vec<TokenStream>> {
         let ret = ncases
             .iter()
             .zip(seeds)
@@ -192,7 +192,7 @@ impl TokenStream {
         Ok(ret)
     }
 
-    fn with_seed_and_ncase(&self, seed: &(usize, usize), ncase_new: u64 ) -> Result<TokenStream> {
+    fn with_seed_and_ncase(&self, seed: &Seed, ncase_new: u64) -> Result<TokenStream> {
         let mut ret = self.clone();
         let index_ncase = self.find_index_single("ncase").ok_or("Cannot find ncase")?;
         let index_seed = self.find_index_single("initial seeds")

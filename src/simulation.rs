@@ -15,6 +15,8 @@ use std::fmt;
 use util::Result;
 use std::result::Result as StdResult;
 
+pub type Seed = (usize, usize); // is this correct integer type?
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimInput {
     pub application: String,
@@ -26,7 +28,7 @@ pub struct SingSimInput {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParSimInput {
     pub prototype: SingSimInput,
-    pub seeds: Vec<(usize, usize)>,
+    pub seeds: Vec<Seed>,
     pub ncases: Vec<u64>,
 }
 
@@ -109,7 +111,6 @@ fn egs_home_path() -> PathBuf {
     path
 }
 
-pub type Seed = (usize, usize);
 impl SingSimInput {
     pub fn new(application: String, input_content: String, pegsfile: String) -> Self {
         let digest = sha3::Sha3_256::digest(input_content.as_bytes());
@@ -180,15 +181,18 @@ impl SingSimInput {
         path
     }
 
-    pub fn split(self, seeds: Vec<Seed>, ncases: Vec<u64>)
-        -> ParSimInput {
+    pub fn split(self, seeds: Vec<Seed>, ncases: Vec<u64>) -> ParSimInput {
         let prototype = self;
-        ParSimInput { seeds, prototype, ncases}
+        ParSimInput {
+            seeds,
+            prototype,
+            ncases,
+        }
     }
 
     pub fn splitn(self, n: usize) -> Result<ParSimInput> {
         let stream = TokenStream::parse_string(&(self.input_content))?;
-        let seeds  = stream.generate_seeds(n)?;
+        let seeds = stream.generate_seeds(n)?;
         let ncases = stream.generate_ncases(n)?;
         let ret = self.split(seeds, ncases);
         Ok(ret)
