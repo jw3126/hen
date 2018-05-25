@@ -245,7 +245,15 @@ impl<T> Omitable<T> {
 impl SingSimFinished {
     fn parse_output(&self) -> SingSimParsedOutput {
         let mut reader = BufReader::new(self.stdout.as_bytes());
-        return output_parser::parse_simulation_output(&mut reader);
+        let rout = output_parser::parse_simulation_output(&mut reader);
+        match rout {
+            Ok(ret) => ret,
+            Err(err) => SingSimParsedOutput {
+                dose: Err(err.clone()),
+                total_cpu_time: Err(err.clone()),
+                simulation_finished: Err(err.clone()),
+            },
+        }
     }
 
     pub fn report(&self) -> SingSimReport {

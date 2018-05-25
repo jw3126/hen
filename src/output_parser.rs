@@ -2,7 +2,7 @@ use std::io::BufRead;
 use regex::Regex;
 use uncertain::UncertainF64;
 use simulation::SingSimParsedOutput;
-use util::Result;
+use util::{debug_string, Result};
 
 fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
     let re = Regex::new(r"^(.*[^\.])\.\.\.*(.*)$").unwrap();
@@ -97,14 +97,14 @@ fn test_parse_geometry_dose() {
     );
 }
 
-pub fn parse_simulation_output(reader: &mut BufRead) -> SingSimParsedOutput {
+pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutput> {
     let re = Regex::new("^==(=*)").unwrap();
     read_line_until(reader, &re);
     read_line_until(reader, &re);
-    let mut line = read_line(reader).unwrap();
+    let mut line = read_line(reader).ok_or("Unexpected end of file".to_string())?;
     while !(re.is_match(&line)) {
         let _kv = parse_dot_separated_key_value(line.trim()).unwrap();
-        line = read_line(reader).unwrap();
+        line = read_line(reader).ok_or("Unexpected end of file".to_string())?;
     }
     read_line_until(reader, &Regex::new("^Finished simulation").unwrap());
 
@@ -160,9 +160,10 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> SingSimParsedOutput {
             }
         }
     };
-    return SingSimParsedOutput {
+    let ret = SingSimParsedOutput {
         dose,
         total_cpu_time,
         simulation_finished,
     };
+    Ok(ret)
 }
