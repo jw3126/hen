@@ -13,6 +13,7 @@ use uncertain::UncertainF64;
 use output_parser;
 use std::fmt;
 use util::Result;
+use util;
 use std::result::Result as StdResult;
 
 pub type Seed = (usize, usize); // is this correct integer type?
@@ -56,7 +57,7 @@ pub struct SingSimParsedOutput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimReport {
-    pub input: SingSimInput,
+    pub input: Omitable<SingSimInput>,
     pub stderr: Omitable<String>,
     pub stdout: Omitable<String>,
     pub exit_status: Omitable<i32>,
@@ -83,6 +84,7 @@ pub struct ParSimReport {
 
 impl ParSimInput {
     pub fn run(&self) -> Result<ParSimFinished> {
+        self.validate()?;
         let stream = TokenStream::parse_string(&(self.prototype.input_content))?;
         let streams = stream.split(&self.seeds, &self.ncases)?;
         let application = &self.prototype.application;
@@ -101,6 +103,39 @@ impl ParSimInput {
             outputs: results,
         };
         return Ok(ret);
+    }
+
+    pub fn validate(&self) -> Result<()> {
+        let len_seeds = self.seeds.len();
+        let len_ncases = self.ncases.len();
+        if len_seeds != len_ncases {
+            let msg = format!("Got {} seeds, but {} ncases", len_seeds, len_ncases);
+            return Err(msg.to_string());
+        }
+
+        if !util::has_unique_elements(self.seeds.clone()) {
+            let msg = "Duplicate seeds detected.";
+            return Err(msg.to_string());
+        }
+
+        Ok(())
+    }
+
+    pub fn merge(&self, other:&ParSimInput) -> Result<ParSimInput> {
+        if self.prototype != other.prototype {
+            let msg = "Cannot merge simulations with different prototypes";
+            return Err(msg.to_string());
+        }
+        let prototype = self.prototype.clone();
+        let mut seeds = Vec::new();
+        seeds.extend(&self.seeds);
+        seeds.extend(&other.seeds);
+        let mut ncases = Vec::new();
+        ncases.extend(&self.ncases);
+        ncases.extend(&other.ncases);
+        let ret = ParSimInput {prototype, seeds, ncases };
+        ret.validate()?;
+        Ok(ret)
     }
 }
 
@@ -258,14 +293,25 @@ impl SingSimFinished {
 
     pub fn report(&self) -> SingSimReport {
         let out = self.parse_output();
-        SingSimReport {
-            input: self.input.clone(),
-            stderr: Omitable::Available(self.stderr.clone()),
-            stdout: Omitable::Available(self.stdout.clone()),
-            exit_status: Omitable::Available(self.exit_status),
-            dose: Omitable::from_result(out.dose),
-            total_cpu_time: Omitable::from_result(out.total_cpu_time),
-            simulation_finished: Omitable::from_result(out.simulation_finished),
+        let exit_status = Omitable::Available(self.exit_status);
+        let dose = Omitable::from_result(out.dose);
+        let total_cpu_time = Omitable::from_result(out.total_cpu_time);
+        let simulation_finished = Omitable::from_result(out.simulation_finished);
+        let stderr = match simulation_finished {
+            Omitable::Available(true) => Omitable::Omitted,
+            _ => Omitable::Available(self.stderr.clone())
+        };
+        let stdout = match simulation_finished {
+            Omitable::Available(true) => Omitable::Omitted,
+            _ => Omitable::Available(self.stdout.clone())
+        };
+        let input = match simulation_finished {
+            Omitable::Available(true) => Omitable::Omitted,
+            _ => Omitable::Available(self.input.clone())
+        };
+        SingSimReport {input,
+            stderr, stdout, exit_status,
+            dose, total_cpu_time, simulation_finished,
         }
     }
 }
@@ -349,6 +395,15 @@ impl ParSimFinished {
         ret = ret.iter()
             .map(|&(ref label, ref dose)| (label.to_string(), *dose * wt))
             .collect();
+        Ok(ret)
+    }
+
+    pub fn merge(&self, other:&ParSimFinished) -> Result<ParSimFinished> {
+        let input = self.input.merge(&other.input)?;
+        let mut outputs = Vec::new();
+        outputs.extend(self.outputs.clone());
+        outputs.extend(other.outputs.clone());
+        let ret = ParSimFinished {input, outputs};
         Ok(ret)
     }
 }

@@ -1,4 +1,6 @@
 use serde::Serialize;
+use std::collections::HashSet;
+use std::hash::Hash;
 use serde;
 use serde_json as serde_format;
 // use serde_yaml as serde_format // produces ugly yaml files
@@ -39,4 +41,22 @@ pub fn asset_path() -> PathBuf {
         .canonicalize()
         .unwrap();
     return filepath;
+}
+
+pub fn has_unique_elements<T>(iter: T) -> bool
+where
+    T: IntoIterator,
+    T::Item: Eq + Hash,
+{
+    let mut uniq = HashSet::new();
+    iter.into_iter().all(move |x| uniq.insert(x))
+}
+
+#[test]
+fn test_has_unique_elements() {
+    assert!(!has_unique_elements(vec![10, 20, 30, 10, 50]));
+    assert!(has_unique_elements(vec![10, 20, 30, 40, 50]));
+    assert!(has_unique_elements(Vec::<u8>::new()));
+    assert!(has_unique_elements(vec![(1,2),(1,3)]));
+    assert!(!has_unique_elements(vec![(1,2),(1,2)]));
 }
