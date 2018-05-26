@@ -2,7 +2,7 @@ use clap::{Arg, ArgMatches, SubCommand};
 use clap;
 use std::path::{Path, PathBuf};
 use num_cpus;
-use simulation::{ParSimReport, SingSimInput};
+use simulation::{ParSimReport, SingSimInput, Seed};
 use std::env::current_dir;
 use util::{debug_string, load, save, Result};
 use std::fs;
@@ -12,6 +12,7 @@ use tokenizer::TokenStream;
 use std::io::BufReader;
 use std;
 use std::ffi::OsStr;
+use serde_json;
 
 fn create_app() -> clap::App<'static, 'static> {
     clap::App::new("hen")
@@ -58,6 +59,19 @@ fn create_app() -> clap::App<'static, 'static> {
                     Arg::with_name("NTHREADS")
                         .long("nthreads")
                         .help("Number of threads that should be used for the simulation. Defaults to the number of cores.")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("SEEDS")
+                        .long("seeds")
+                        .help("Random seeds that should be used. Format is e.g. [[1,2],[1,3],[4,5]].")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("NCASES")
+                        .long("ncases")
+                        .short("n")
+                        .help("List of ncases that should be used. e.g [10000,10000,20000].")
                         .takes_value(true),
                 ),
         )
@@ -291,6 +305,8 @@ struct RunConfig {
     application: String,
     outputpath: PathBuf,
     pegsfile: String,
+    seeds: Option<Vec<Seed>>,
+    ncases: Option<Vec<u64>>,
     nthreads: usize,
     dir: bool, // run all files in a directory
 }
@@ -311,13 +327,19 @@ fn abspath_from_string(s: &str) -> Result<PathBuf> {
 impl RunConfig {
     pub fn validate(&self) -> Result<()> {
         if self.nthreads == 0 {
-            Err("NTHREADS > 0 must hold.".to_string())
-        } else {
-            Ok(())
+            return Err("NTHREADS > 0 must hold.".to_string())
         }
+        if let Some(ref seeds) = self.seeds {
+            if let Some(ref ncases) = self.ncases {
+                if seeds.len() != ncases.len() {
+                    return Err("SEEDS and NCASES must have the same length.".to_string());
+                }
+            }
+        }
+        Ok(())
     }
 
-    fn create_single_simulation(&self, input_path: &Path) -> Result<SingSimInput> {
+    fn create_sing_sim_input(&self, input_path: &Path) -> Result<SingSimInput> {
         SingSimInput::from_egsinp_path(&self.application, input_path, &self.pegsfile)
     }
 
@@ -326,8 +348,8 @@ impl RunConfig {
             None => {}
             Some(d) => fs::create_dir_all(d).map_err(debug_string)?,
         };
-        let out = self.create_single_simulation(input_path)?
-            .splitn(self.nthreads)?
+        let out = self.create_sing_sim_input(input_path)?
+            .split_fancy(self.ncases.clone(), self.seeds.clone(), self.nthreads)?
             .run()?
             .report();
         println!("{}", out);
@@ -378,6 +400,22 @@ impl SubCmd for RunConfig {
                 .parse::<usize>()
                 .map_err(|_| "Cannot parse NTHREADS".to_string())?,
         };
+        let seeds = match matches.value_of("SEEDS") {
+            None => None,
+            Some(s) => {
+                let v:Vec<Seed> = serde_json::from_str(s)
+                    .map_err(|_|"Cannot parse SEEDS".to_string())?;
+                Some(v)
+            }
+        };
+        let ncases = match matches.value_of("NCASES") {
+            None => None,
+            Some(s) => {
+                let v:Vec<u64> = serde_json::from_str(s)
+                    .map_err(|_|"Cannot parse NCASES".to_string())?;
+                Some(v)
+            }
+        };
         let ret = RunConfig {
             inputpath,
             application,
@@ -385,6 +423,8 @@ impl SubCmd for RunConfig {
             pegsfile,
             nthreads,
             dir,
+            ncases,
+            seeds,
         };
         ret.validate()?;
         Ok(ret)

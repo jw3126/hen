@@ -216,7 +216,7 @@ impl SingSimInput {
         path
     }
 
-    pub fn split(self, seeds: Vec<Seed>, ncases: Vec<u64>) -> ParSimInput {
+    pub fn split(self, ncases: Vec<u64>, seeds: Vec<Seed>) -> ParSimInput {
         let prototype = self;
         ParSimInput {
             seeds,
@@ -225,12 +225,21 @@ impl SingSimInput {
         }
     }
 
-    pub fn splitn(self, n: usize) -> Result<ParSimInput> {
+    pub fn split_fancy(self, mncases: Option<Vec<u64>>, mseeds: Option<Vec<Seed>>, 
+                       nthreads:usize) -> Result<ParSimInput> {
+
         let stream = TokenStream::parse_string(&(self.input_content))?;
-        let seeds = stream.generate_seeds(n)?;
-        let ncases = stream.generate_ncases(n)?;
-        let ret = self.split(seeds, ncases);
-        Ok(ret)
+        let seed_count: Option<usize> = mseeds .as_ref().map(|v|v.len());
+        let case_count: Option<usize> = mncases.as_ref().map(|v|v.len());
+        let n = seed_count
+            .or(case_count)
+            .unwrap_or(nthreads);
+        let seeds = mseeds.
+            unwrap_or(stream.generate_seeds(n)?);
+        let ncases = mncases.
+            unwrap_or(stream.generate_ncases(n)?);
+
+        Ok(self.split(ncases, seeds))
     }
 }
 
@@ -314,6 +323,22 @@ impl SingSimFinished {
             dose, total_cpu_time, simulation_finished,
         }
     }
+
+    // TODO this is not dry
+    pub fn report_full(&self) -> SingSimReport {
+        let out = self.parse_output();
+        let exit_status = Omitable::Available(self.exit_status);
+        let dose = Omitable::from_result(out.dose);
+        let total_cpu_time = Omitable::from_result(out.total_cpu_time);
+        let simulation_finished = Omitable::from_result(out.simulation_finished);
+        let stdout = Omitable::Available(self.stdout.clone());
+        let stderr = Omitable::Available(self.stderr.clone());
+        let input  = Omitable::Available(self.input .clone());
+        SingSimReport {input,
+            stderr, stdout, exit_status,
+            dose, total_cpu_time, simulation_finished,
+        }
+    }
 }
 
 fn traverse_result<T, E>(iter: Vec<StdResult<T, E>>) -> StdResult<Vec<T>, E> {
@@ -327,8 +352,10 @@ fn traverse_result<T, E>(iter: Vec<StdResult<T, E>>) -> StdResult<Vec<T>, E> {
 impl ParSimFinished {
     pub fn report(&self) -> ParSimReport {
         // util::save(Path::new("fin_par_sim.json"), self);
-        let outputs: Vec<SingSimReport> =
+        // we want the first run to be detailed
+        let mut outputs: Vec<SingSimReport> =
             self.outputs.iter().map(SingSimFinished::report).collect();
+        outputs[0] = self.outputs[0].report_full();
         let total_cpu_time = outputs
             .iter()
             .map(|o| o.total_cpu_time.clone())
@@ -344,8 +371,6 @@ impl ParSimFinished {
             });
 
         let dose = Omitable::from_result(Self::compute_dose(&outputs));
-
-        // util::save(&Path::new("test_data/asdf.json"),self);
 
         ParSimReport {
             input: self.input.clone(),
@@ -415,12 +440,32 @@ impl ParSimReport {
 
     pub fn to_string_all(&self) -> String {
         let mut ret = String::new();
-        ret.push_str(&Self::string_section("Output"));
+        ret.push_str(&Self::string_section("Input"));
+        ret.push_str("\n");
         ret.push_str(&self.to_string_input());
         ret.push_str("\n");
+        ret.push_str(&Self::string_section("Example"));
+        ret.push_str("\n");
+        ret.push_str(&self.to_string_first_sing_sim());
+        ret.push_str("\n");
         ret.push_str(&Self::string_section("Output"));
+        ret.push_str("\n");
         ret.push_str(&self.to_string_output());
         ret
+    }
+
+    pub fn to_string_first_sing_sim(&self) -> String {
+        match self.outputs {
+            Omitable::Fail(ref err) => err.clone(),
+            Omitable::Omitted   => "".to_string(),
+            Omitable::Available(ref v) => {
+                if v.len() == 0 {
+                    "".to_string()
+                } else {
+                    format!("{}", v[0]).to_string()
+                }
+            },
+        }
     }
 
     pub fn string_section(title: &str) -> String {
@@ -431,6 +476,19 @@ impl ParSimReport {
         self.string_input()
     }
 
+    pub fn compute_efficiency(&self) -> Omitable<f64> {
+        fn inner(doses:Vec<(String,UncertainF64)>,t:f64)->f64 {
+            let mut ret = 0.;
+            let n = doses.len();
+            for (ref _label, ref score) in doses {
+                let rvar:f64 = score.rvar();
+                ret += 1.0 /  rvar / t;
+            }
+            ret / n as f64
+        };
+        Omitable::map2(inner, self.dose.clone(), self.total_cpu_time.clone())
+    }
+
     pub fn to_string_output(&self) -> String {
         let mut ret = String::new();
         ret.push_str(&self.string_total_cpu_time());
@@ -438,6 +496,8 @@ impl ParSimReport {
         ret.push_str(&self.string_simulation_finished());
         ret.push_str(&"\n");
         ret.push_str(&self.string_dose());
+        ret.push_str(&"\n");
+        ret.push_str(&self.string_efficienty());
         ret.push_str(&"\n");
         ret
     }
@@ -468,6 +528,10 @@ impl ParSimReport {
         Self::string_key_omittable("Total cpu time", &self.total_cpu_time)
     }
 
+    fn string_efficienty(&self) -> String {
+        Self::string_key_omittable("Efficiency", &self.compute_efficiency())
+    }
+
     fn string_simulation_finished(&self) -> String {
         Self::string_key_omittable("Simulation finished", &self.simulation_finished)
     }
@@ -480,6 +544,25 @@ impl ParSimReport {
 impl fmt::Display for ParSimReport {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.to_string_all())
+    }
+}
+
+impl <T> fmt::Display for Omitable<T> where 
+    T : fmt::Display {
+    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &Omitable::Omitted      => writeln!(f,""),
+            &Omitable::Fail(ref msg)    => writeln!(f, "{}", msg),
+            &Omitable::Available(ref x) => writeln!(f, "{}", x),
+        }
+    }
+}
+
+impl fmt::Display for SingSimReport {
+    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "{}", self.input)?;
+        writeln!(f, "{}", self.stdout)?;
+        writeln!(f, "{}", self.stderr)
     }
 }
 

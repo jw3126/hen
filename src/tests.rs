@@ -20,6 +20,7 @@ mod tests {
         let soutput_path = output_path.to_str().unwrap();
         assert_cli::Assert::main_binary()
             .with_args(&["run", sinput_path, "-o", soutput_path])
+            .stdout().contains("finishSimulation(egs_chamber) 0")
             .unwrap();
 
         let r: ParSimReport = load(&output_path).unwrap();
@@ -32,6 +33,46 @@ mod tests {
         assert_eq!(geo1, "the_cylinder");
         assert_eq!(geo01, "the_cylinder");
         assert!(((dose0.value() + dose1.value() / dose01.value()).abs() - 1.) < 0.01);
+        fs::remove_file(&output_path).unwrap();
+    }
+
+    #[test]
+    fn test_run_custom_seeds_ncases() {
+        let input_path = asset_path().join("block2.egsinp");
+        let sinput_path = input_path.to_str().unwrap();
+        let output_path = asset_path().join("output").join(randstring());
+        let soutput_path = output_path.to_str().unwrap();
+        assert_cli::Assert::main_binary()
+            .with_args(&["run", sinput_path,
+                       "-o", soutput_path,
+                       "--seeds=[[1983,324],[3,4]]",
+                       "--ncases=[173, 200]"])
+            .stdout().contains("finishSimulation(egs_chamber) 0")
+            .unwrap();
+
+        let r: ParSimReport = load(&output_path).unwrap();
+        assert_eq!(r.input.seeds,vec![(1983,324),(3,4)]);
+        assert_eq!(r.input.ncases,vec![173, 200]);
+        let outs = r.outputs.into_result().unwrap();
+        let s:String = outs[0].clone().input.into_result().unwrap()
+            .input_content;
+        assert!(s.contains("173"));
+        assert!(s.contains("1983 324"));
+        fs::remove_file(&output_path).unwrap();
+    }
+
+    #[test]
+    fn test_run_bad_pegs() {
+        let input_path = asset_path().join("block2.egsinp");
+        let sinput_path = input_path.to_str().unwrap();
+        let output_path = asset_path().join("output").join(randstring());
+        let soutput_path = output_path.to_str().unwrap();
+        assert_cli::Assert::main_binary()
+            .with_args(&["run", sinput_path, "-o", soutput_path, "-p", "tutor_data"])
+            .stdout().contains("PROGRAM STOPPED IN HATCH BECAUSE THE")
+            .unwrap();
+
+        let _r: ParSimReport = load(&output_path).unwrap();
         fs::remove_file(&output_path).unwrap();
     }
 
