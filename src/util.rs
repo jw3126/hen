@@ -7,13 +7,31 @@ use serde_json as serde_format;
 use std::path::{Path, PathBuf};
 use std;
 use std::fs;
+use std::fs::File;
 use std::fmt::Debug;
+use errors::*;
+use error_chain::ChainedError;
 
-pub type Result<T> = std::result::Result<T, String>;
+pub type StubResult<T> = std::result::Result<T, String>;
+
+pub trait IntoStub<T> {
+    fn into_stub(self:Self) -> StubResult<T>;
+}
+impl<T> IntoStub<T> for Result<T> {
+    fn into_stub(self:Result<T>) -> StubResult<T> {
+        match self {
+            Ok(t) => Ok(t),
+            Err(Error(kind,_)) =>Err(format!("{}", kind).to_string())
+        }
+    }
+}
+
 
 pub fn save<T: Serialize>(path: &Path, obj: &T) -> Result<()> {
-    let file = fs::File::create(path).map_err(|err| format!("{:?}", err))?;
-    serde_format::to_writer_pretty(file, obj).map_err(|err| format!("{:?}", err))?;
+    let file = File::create(path)
+        .chain_err(||format!("Unable to create path {:?}",path))?;
+    serde_format::to_writer_pretty(file, obj)
+        .chain_err(||"Unable to write object to json file")?;
     return Ok(());
 }
 
@@ -22,9 +40,11 @@ pub fn load<T>(path: &Path) -> Result<T>
 where
     for<'de> T: serde::Deserialize<'de>,
 {
-    let reader = fs::File::open(path).map_err(|e| format!("{:}", e).to_string())?;
-    let ret: T = serde_format::from_reader(reader).map_err(|e| format!("{:?}", e).to_string())?;
-    return Ok(ret);
+    let reader = fs::File::open(path)
+        .chain_err(|| format!("Unable to open {:?}", path))?;
+    let ret: T = serde_format::from_reader(reader)
+        .chain_err(|| format!("Unable to read object from json file"))?;
+    Ok(ret)
 }
 
 pub fn debug_string<E: Debug>(e: E) -> String {

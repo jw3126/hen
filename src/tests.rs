@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use util::{asset_path, load};
+    use util::{StubResult, IntoStub};
     use std::path::Path;
     use simulation::ParSimReport;
     use assert_cli;
@@ -47,7 +48,7 @@ mod tests {
             .unwrap();
 
         let r: ParSimReport = load(&output_path).unwrap();
-        let doses = r.dose.into_result().unwrap();
+        let doses = r.dose.into_stub_result().unwrap();
         assert_eq!(doses.len(), 3);
         let (ref geo0, dose0) = doses[0];
         let (ref geo1, dose1) = doses[1];
@@ -75,8 +76,8 @@ mod tests {
         let r: ParSimReport = load(&output_path).unwrap();
         assert_eq!(r.input.seeds,vec![(1983,324),(3,4)]);
         assert_eq!(r.input.ncases,vec![173, 200]);
-        let outs = r.outputs.into_result().unwrap();
-        let s:String = outs[0].clone().input.into_result().unwrap()
+        let outs = r.outputs.into_stub_result().unwrap();
+        let s:String = outs[0].clone().input.into_stub_result().unwrap()
             .input_content;
         assert!(s.contains("173"));
         assert!(s.contains("1983 324"));
@@ -145,7 +146,7 @@ mod tests {
 
         assert!(r1 != r2);
         assert_eq!(r1.dose, r2.dose);
-        r1.dose.into_result().unwrap();
+        r1.dose.into_stub_result().unwrap();
     }
 
 

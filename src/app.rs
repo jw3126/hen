@@ -4,7 +4,8 @@ use std::path::{Path, PathBuf};
 use num_cpus;
 use simulation::{ParSimReport, SingSimInput, Seed};
 use std::env::current_dir;
-use util::{debug_string, load, save, Result};
+use util::{debug_string, load, save};
+use errors::*;
 use std::fs;
 use std::process;
 use std::io::Write;
@@ -161,14 +162,15 @@ impl SubCmd for FormatConfig {
 
     fn run(&self) -> Result<()> {
         let formatted = {
-            let file = fs::File::open(&self.path).map_err(debug_string)?;
+            let file = fs::File::open(&self.path)
+                .chain_err(||"Cannot read")?;
             let mut reader = BufReader::new(file);
             TokenStream::parse_reader(&mut reader)?.to_string()
         };
         fs::File::create(&self.path)
             .map_err(debug_string)?
             .write_all(formatted.as_str().as_bytes())
-            .map_err(debug_string)
+            .chain_err(||"Cannot write to file")
     }
 }
 
@@ -227,7 +229,7 @@ impl SubCmd for ViewConfig {
                 self.run_json()?;
             }
             _ => {
-                return Err(format!("unknown extension {:?}", ext));
+                bail!("unknown extension {:?}", ext);
             }
         }
         Ok(())
@@ -253,12 +255,11 @@ impl ViewConfig {
         let ret = process::Command::new("egs_view")
             .args(&[filename])
             .output()
-            .map_err(|e| format!("egs_view failed: {:?}", e).to_string())?;
+            .chain_err(||"egs_view failed")?;
         if ret.status.success() {
             Ok(ret)
         } else {
-            let msg = format!("{:?}", ret);
-            Err(msg)
+            bail!("{:?}", ret);
         }
     }
 }
@@ -327,12 +328,12 @@ fn abspath_from_string(s: &str) -> Result<PathBuf> {
 impl RunConfig {
     pub fn validate(&self) -> Result<()> {
         if self.nthreads == 0 {
-            return Err("NTHREADS > 0 must hold.".to_string())
+            bail!("NTHREADS > 0 must hold.");
         }
         if let Some(ref seeds) = self.seeds {
             if let Some(ref ncases) = self.ncases {
                 if seeds.len() != ncases.len() {
-                    return Err("SEEDS and NCASES must have the same length.".to_string());
+                    bail!("SEEDS and NCASES must have the same length.");
                 }
             }
         }
@@ -444,7 +445,7 @@ pub fn app_main() -> Result<()> {
         ("view", Some(m)) => ViewConfig::main(m),
         ("rerun", Some(m)) => RerunConfig::main(m),
         ("fmt", Some(m)) => FormatConfig::main(m),
-        ("", _) => Err("Try hen --help".to_string()),
-        x => Err(format!("Unknown subcommand {:?}. Try hen --help", x).to_string()),
+        ("", _) => bail!("Try hen --help"),
+        x => bail!("Unknown subcommand {:?}. Try hen --help", x)
     }
 }

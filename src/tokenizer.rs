@@ -1,8 +1,9 @@
 use std::io::{BufRead, BufReader};
 use std::option::Option;
 use std::iter::Iterator;
-use util::{debug_string, Result};
 use simulation::Seed;
+use errors::*;
+use errors;
 
 use regex::Regex;
 
@@ -27,8 +28,7 @@ impl Token {
         if sp != None {
             return Ok(sp.unwrap());
         };
-        let msg = format!("Cannot parse {}", s.to_string());
-        Err(msg)
+        bail!("Cannot parse {}", s);
     }
 
     fn parse_start(s: &str) -> Option<Token> {
@@ -113,7 +113,7 @@ impl TokenStream {
         let mut tokens = Vec::new();
         loop {
             let ot = Token::read_next(reader);
-            if ot == None {
+            if ot.is_none() {
                 break;
             } // end of file
             let t = ot.unwrap()?;
@@ -122,6 +122,7 @@ impl TokenStream {
         let stream = TokenStream { tokens };
         Ok(stream)
     }
+
     pub fn parse_string(s: &str) -> Result<TokenStream> {
         let mut reader = BufReader::new(s.as_bytes());
         let result = TokenStream::parse_reader(&mut reader);
@@ -175,11 +176,13 @@ impl TokenStream {
     }
 
     pub fn get_ncase(&self) -> Result<u64> {
-        let index_ncase = self.find_index_single("ncase").ok_or("Cannot find ncase")?;
+        let index_ncase = self.find_index_single("ncase")
+            .ok_or("Cannot find ncase")?;
         let sncase = self.get_index(index_ncase)
             .value()
-            .ok_or("Cannor parse ncase")?;
-        let ncase: u64 = str::parse(&sncase).map_err(debug_string)?;
+            .ok_or("Cannot parse ncase")?;
+        let ncase: u64 = str::parse(&sncase).
+            chain_err(||format!("Cannot parse ncase from {}", &sncase))?;
         Ok(ncase)
     }
 
@@ -187,14 +190,15 @@ impl TokenStream {
         let ret = ncases
             .iter()
             .zip(seeds)
-            .map(|(ncase, seed)| self.with_seed_and_ncase(seed, *ncase).unwrap())
+            .map(|(ncase, seed)| self.with_seed_and_ncase(seed, *ncase).unwrap()) // TODO unwrap
             .collect();
         Ok(ret)
     }
 
     fn with_seed_and_ncase(&self, seed: &Seed, ncase_new: u64) -> Result<TokenStream> {
         let mut ret = self.clone();
-        let index_ncase = self.find_index_single("ncase").ok_or("Cannot find ncase")?;
+        let index_ncase = self.find_index_single("ncase")
+            .ok_or("Cannot find ncase")?;
         let index_seed = self.find_index_single("initial seeds")
             .ok_or("Cannot find initial seeds")?;
         ret.tokens[index_ncase] = Token::KeyValue("ncase".to_string(), format!("{}", ncase_new));
@@ -217,7 +221,7 @@ fn single<T>(v: &[T]) -> Option<&T> {
 fn read_clean_line(reader: &mut BufRead) -> Result<String> {
     let mut line = String::new();
     if reader.read_line(&mut line).unwrap() == 0 {
-        return Err("End of file".to_string());
+        bail!("End of file");
     }
     let line = line.split('#').next().unwrap();
     let line = line.trim();
@@ -246,27 +250,30 @@ fn read_token_raw(reader: &mut BufRead) -> Result<String> {
 #[test]
 fn test_parse_single_token() {
     let s_start = ":start rng definition:";
-    let t_start = Ok(Token::Start("rng definition".to_string()));
-    assert_eq!(Token::parse(s_start), t_start);
+    let t_start = Token::Start("rng definition".to_string());
+    assert_eq!(Token::parse(s_start).unwrap(), t_start);
 
     let s_stop = ":stop rng definition:";
-    let t_stop = Ok(Token::Stop("rng definition".to_string()));
-    assert_eq!(Token::parse(s_stop), t_stop);
+    let t_stop = Token::Stop("rng definition".to_string());
+    assert_eq!(Token::parse(s_stop).unwrap(), t_stop);
 
     let s1 = "initial seeds  =  20 1";
-    let t1 = Ok(Token::KeyValue(
+    let t1 = Token::KeyValue(
         "initial seeds".to_string(),
         "20 1".to_string(),
-    ));
-    assert_eq!(Token::parse(s1), t1);
+    );
+    assert_eq!(Token::parse(s1).unwrap(), t1);
 
     let s2 = "type  =  ranmar";
-    let t2 = Ok(Token::KeyValue("type".to_string(), "ranmar".to_string()));
-    assert_eq!(Token::parse(s2), t2);
+    let t2 = Token::KeyValue("type".to_string(), "ranmar".to_string());
+    assert_eq!(Token::parse(s2).unwrap(), t2);
 
     let s_garbage = "garbage";
-    let t_garbage = Err("Cannot parse garbage".to_string());
-    assert_eq!(Token::parse(s_garbage), t_garbage);
+    let t_garbage = "Cannot parse garbage".to_string();
+    match Token::parse(s_garbage) {
+        Err(Error(errors::ErrorKind::Msg(msg),_)) => assert_eq!(msg, t_garbage),
+        _ => panic!(),
+    };
 }
 
 #[test]

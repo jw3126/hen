@@ -2,7 +2,8 @@ use std::io::BufRead;
 use regex::Regex;
 use uncertain::UncertainF64;
 use simulation::SingSimParsedOutput;
-use util::{debug_string, Result};
+use util::{debug_string,IntoStub,StubResult};
+use errors::*;
 
 fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
     let re = Regex::new(r"^(.*[^\.])\.\.\.*(.*)$").unwrap();
@@ -41,19 +42,19 @@ fn read_line(reader: &mut BufRead) -> Option<String> {
     }
 }
 
-fn parse_total_cpu_time(line: &str) -> Result<f64> {
+fn parse_total_cpu_time(line: &str) -> StubResult<f64> {
     let re = Regex::new(r"^Total cpu time for this run:\s*(.*) \(sec.\)").unwrap();
-    let err = format!("Cannot parse total cpu time from {}", line).to_string();
+    let err = format!("Cannot parse total cpu time from {}", line);
     let s = re.captures(&line)
         .ok_or_else(|| err.clone())?
         .get(1)
         .ok_or_else(|| err.clone())?
         .as_str();
-    let ret: f64 = s.parse::<f64>().map_err(|_| err.clone())?;
-    return Ok(ret);
+    let ret: f64 = s.parse::<f64>().map_err(|_| err)?;
+    Ok(ret)
 }
 
-fn parse_geometry_dose(line: &str) -> Result<(String, UncertainF64)> {
+fn parse_geometry_dose(line: &str) -> StubResult<(String,UncertainF64)> {
     let re = Regex::new(r"^\s*(.*)\s\s*(.*) \+/\- (.*)%").unwrap();
     let caps = re.captures(&line)
         .ok_or(format!("Cannot match {:?} on {:?}.", re, line))?;

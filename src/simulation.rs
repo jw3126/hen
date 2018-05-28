@@ -12,8 +12,9 @@ use std;
 use uncertain::UncertainF64;
 use output_parser;
 use std::fmt;
-use util::Result;
+use errors::*;
 use util;
+use util::{StubResult, IntoStub};
 use std::result::Result as StdResult;
 
 pub type Seed = (usize, usize); // is this correct integer type?
@@ -50,9 +51,9 @@ pub enum Omitable<T> {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimParsedOutput {
-    pub dose: Result<Vec<(String, UncertainF64)>>,
-    pub total_cpu_time: Result<f64>,
-    pub simulation_finished: Result<bool>,
+    pub dose: StubResult<Vec<(String, UncertainF64)>>,
+    pub total_cpu_time: StubResult<f64>,
+    pub simulation_finished: StubResult<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -109,13 +110,11 @@ impl ParSimInput {
         let len_seeds = self.seeds.len();
         let len_ncases = self.ncases.len();
         if len_seeds != len_ncases {
-            let msg = format!("Got {} seeds, but {} ncases", len_seeds, len_ncases);
-            return Err(msg.to_string());
+            bail!("Got {} seeds, but {} ncases", len_seeds, len_ncases);
         }
 
         if !util::has_unique_elements(self.seeds.clone()) {
-            let msg = "Duplicate seeds detected.";
-            return Err(msg.to_string());
+            bail!("Duplicate seeds detected.");
         }
 
         Ok(())
@@ -123,8 +122,7 @@ impl ParSimInput {
 
     pub fn merge(&self, other:&ParSimInput) -> Result<ParSimInput> {
         if self.prototype != other.prototype {
-            let msg = "Cannot merge simulations with different prototypes";
-            return Err(msg.to_string());
+            bail!("Cannot merge simulations with different prototypes");
         }
         let prototype = self.prototype.clone();
         let mut seeds = Vec::new();
@@ -160,10 +158,11 @@ impl SingSimInput {
     }
 
     pub fn from_egsinp_path(application: &str, path: &Path, pegsfile: &str) -> Result<Self> {
-        let mut file = File::open(path).map_err(|err| format!("{:?}", err))?;
+        let mut file = File::open(path)
+            .chain_err(||"Cannot open path")?;
         let mut content = String::new();
         file.read_to_string(&mut content)
-            .map_err(|err| format!("{:?}", err))?;
+            .chain_err(||"Error reading input file")?;
         return Ok(Self::new(
             application.to_string(),
             content,
@@ -171,15 +170,16 @@ impl SingSimInput {
         ));
     }
 
-    fn run_cmd(&self) -> std::io::Result<Output> {
-        let mut file = fs::File::create(self.path_exec_with_ext("egsinp"))?;
+    fn run_cmd(&self) -> Result<Output> {
+        let mut file = fs::File::create(self.path_exec_with_ext("egsinp"))
+            .chain_err(||"Error creating input file")?;
         file.write_all(self.input_content.as_bytes()).unwrap();
 
         let ret = Command::new(self.application.clone())
             .args(&["-i", self.checksum.as_str(), "-p", self.pegsfile.as_str()])
             .output();
 
-        return ret;
+        ret.chain_err(||"Error running egs")
     }
 
     pub fn run(&self) -> SingSimFinished {
@@ -247,11 +247,19 @@ impl<T> Omitable<T> {
     pub fn from_result(r: Result<T>) -> Omitable<T> {
         match r {
             Ok(value) => Omitable::Available(value),
+            Err(Error(ErrorKind::Msg(s),_)) => Omitable::Fail(s),
+            Err(Error(s,_)) => Omitable::Fail(format!("{:?}",s).to_string()),
+        }
+    }
+
+    pub fn from_stub_result(r: StubResult<T>) -> Omitable<T> {
+        match r {
+            Ok(value) => Omitable::Available(value),
             Err(s) => Omitable::Fail(s),
         }
     }
 
-    pub fn into_result(self) -> Result<T> {
+    pub fn into_stub_result(self) -> StubResult<T> {
         match self {
             Omitable::Fail(s) => Err(s),
             Omitable::Omitted => Err("Omitted".to_string()),
@@ -289,7 +297,7 @@ impl<T> Omitable<T> {
 impl SingSimFinished {
     fn parse_output(&self) -> SingSimParsedOutput {
         let mut reader = BufReader::new(self.stdout.as_bytes());
-        let rout = output_parser::parse_simulation_output(&mut reader);
+        let rout = output_parser::parse_simulation_output(&mut reader).into_stub();
         match rout {
             Ok(ret) => ret,
             Err(err) => SingSimParsedOutput {
@@ -303,9 +311,9 @@ impl SingSimFinished {
     pub fn report(&self) -> SingSimReport {
         let out = self.parse_output();
         let exit_status = Omitable::Available(self.exit_status);
-        let dose = Omitable::from_result(out.dose);
-        let total_cpu_time = Omitable::from_result(out.total_cpu_time);
-        let simulation_finished = Omitable::from_result(out.simulation_finished);
+        let dose =                Omitable::from_stub_result(out.dose);
+        let total_cpu_time =      Omitable::from_stub_result(out.total_cpu_time);
+        let simulation_finished = Omitable::from_stub_result(out.simulation_finished);
         let stderr = match simulation_finished {
             Omitable::Available(true) => Omitable::Omitted,
             _ => Omitable::Available(self.stderr.clone())
@@ -328,9 +336,9 @@ impl SingSimFinished {
     pub fn report_full(&self) -> SingSimReport {
         let out = self.parse_output();
         let exit_status = Omitable::Available(self.exit_status);
-        let dose = Omitable::from_result(out.dose);
-        let total_cpu_time = Omitable::from_result(out.total_cpu_time);
-        let simulation_finished = Omitable::from_result(out.simulation_finished);
+        let dose                = Omitable::from_stub_result(out.dose);
+        let total_cpu_time      = Omitable::from_stub_result(out.total_cpu_time);
+        let simulation_finished = Omitable::from_stub_result(out.simulation_finished);
         let stdout = Omitable::Available(self.stdout.clone());
         let stderr = Omitable::Available(self.stderr.clone());
         let input  = Omitable::Available(self.input .clone());
@@ -382,9 +390,9 @@ impl ParSimFinished {
     }
 
     fn compute_dose(reports: &[SingSimReport]) -> Result<Vec<(String, UncertainF64)>> {
-        let doses1: Vec<Result<Vec<(String, UncertainF64)>>> = reports
+        let doses1: Vec<StubResult<Vec<(String, UncertainF64)>>> = reports
             .iter()
-            .map(|o| o.dose.clone().into_result())
+            .map(|o| o.dose.clone().into_stub_result())
             .collect();
         let doses2 = traverse_result(doses1)?;
         if doses2.is_empty() {
@@ -394,10 +402,7 @@ impl ParSimFinished {
         let nruns = doses2.len();
         for i_run in 1..nruns {
             if doses2[i_run].len() != ret.len() {
-                let msg = "Simulations have inconsistend 
-                    numbers of scoring geometries."
-                    .to_string();
-                return Err(msg);
+                bail!("Simulations have inconsistend numbers of scoring geometries.");
             }
             for i_reg in 0..ret.len() {
                 let d_new = {
@@ -406,10 +411,7 @@ impl ParSimFinished {
                     if *s_inc == *s_ret {
                         *d_ret + *d_inc
                     } else {
-                        let msg = "Simulation have inconsistent scoring regions
-                        "
-                            .to_string();
-                        Err(msg)?
+                        bail!("Simulation have inconsistent scoring regions");
                     }
                 };
                 ret[i_reg].1 = d_new;
@@ -577,6 +579,7 @@ impl fmt::Display for SingSimInput {
 
 #[cfg(test)]
 mod tests {
+    use util::{StubResult, IntoStub};
     use super::*;
     use util::{asset_path, load};
     use uncertain::UncertainF64;
@@ -599,7 +602,7 @@ mod tests {
         let dose_combined = UncertainF64::from_value_var(1. / 8., 0.)
             * (dose1 + dose2 + dose3 + dose4 + dose5 + dose6 + dose7 + dose8);
 
-        let dose_reported = report.dose.into_result().unwrap().first().unwrap().1;
+        let dose_reported = report.dose.into_stub_result().unwrap().first().unwrap().1;
         assert_relative_eq!(dose_reported.value(), dose_combined.value());
         assert_relative_eq!(dose_reported.rstd(), dose_combined.rstd());
     }
