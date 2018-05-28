@@ -21,7 +21,7 @@ pub type Seed = (usize, usize); // is this correct integer type?
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimInput {
     pub application: String,
-    pub input_content: String,
+    pub content: String,
     pub pegsfile: String,
     pub checksum: String,
     pub input_filename: String,
@@ -30,7 +30,7 @@ pub struct SingSimInput {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimInputBuilder {
     application:   Option<String>,
-    input_content: Option<String>,
+    content: Option<String>,
     pegsfile:      Option<String>,
     input_filename:Option<String>,
 }
@@ -39,7 +39,7 @@ impl SingSimInputBuilder {
     pub fn new() -> Self {
         SingSimInputBuilder {
             application: None,
-            input_content: None,
+            content: None,
             pegsfile: None,
             input_filename: None,
         }
@@ -50,8 +50,8 @@ impl SingSimInputBuilder {
         self
     }
 
-    pub fn input_content(mut self, s:&str) -> Self {
-        self.input_content = Some(s.to_string());
+    pub fn content(mut self, s:&str) -> Self {
+        self.content = Some(s.to_string());
         self
     }
 
@@ -66,8 +66,8 @@ impl SingSimInputBuilder {
     }
 
     fn get_checksum(&self) -> Option<String> {
-        if let &Some(ref input_content) = &self.input_content {
-            let digest = sha3::Sha3_256::digest(input_content.as_bytes());
+        if let &Some(ref content) = &self.content {
+            let digest = sha3::Sha3_256::digest(content.as_bytes());
             let checksum = format!("{:x}", digest);
             Some(checksum)
         } else {
@@ -83,11 +83,11 @@ impl SingSimInputBuilder {
         match self { 
             SingSimInputBuilder {
                 application:Some(application),
-                input_content:Some(input_content),
+                content:Some(content),
                 pegsfile:Some(pegsfile),
                 input_filename:Some(input_filename),
             } => {
-                let sim = SingSimInput {application, input_content,
+                let sim = SingSimInput {application, content,
                     pegsfile, checksum, input_filename};
                 Ok(sim)},
             _ => Err("All fields of builder should be set.".to_string())
@@ -154,14 +154,14 @@ pub struct ParSimReport {
 impl ParSimInput {
     pub fn run(&self) -> Result<ParSimFinished> {
         self.validate()?;
-        let stream = TokenStream::parse_string(&(self.prototype.input_content))?;
+        let stream = TokenStream::parse_string(&(self.prototype.content))?;
         let streams = stream.split(&self.seeds, &self.ncases)?;
         let application = &self.prototype.application;
         let pegsfile = &self.prototype.pegsfile;
-        let create_sim = |input_content: String| {
+        let create_sim = |content: String| {
             SingSimInputBuilder::new()
                 .application(application)
-                .input_content(&input_content)
+                .content(&content)
                 .pegsfile(pegsfile)
                 .input_filename(&self.prototype.input_filename)
                 .build().unwrap()
@@ -224,24 +224,24 @@ impl SingSimInput {
 
     pub fn from_egsinp_path(application: &str, path: &Path, pegsfile: &str) -> Result<Self> {
         let mut file = File::open(path).map_err(|err| format!("{:?}", err))?;
-        let mut input_content = String::new();
+        let mut content = String::new();
         let input_filename = path.file_name()
             .ok_or("Error getting file_name")?
             .to_str().unwrap();
-        file.read_to_string(&mut input_content)
+        file.read_to_string(&mut content)
             .map_err(debug_string)?;
         let sim = SingSimInputBuilder::new()
             .pegsfile(pegsfile)
             .input_filename(input_filename)
             .application(application)
-            .input_content(&input_content)
+            .content(&content)
             .build().unwrap();
         Ok(sim)
     }
 
     fn run_cmd(&self) -> std::io::Result<Output> {
         let mut file = fs::File::create(self.path_exec_with_ext("egsinp"))?;
-        file.write_all(self.input_content.as_bytes()).unwrap();
+        file.write_all(self.content.as_bytes()).unwrap();
 
         let ret = Command::new(self.application.clone())
             .args(&["-i", self.checksum.as_str(), "-p", self.pegsfile.as_str()])
@@ -296,7 +296,7 @@ impl SingSimInput {
     pub fn split_fancy(self, mncases: Option<Vec<u64>>, mseeds: Option<Vec<Seed>>, 
                        nthreads:usize) -> Result<ParSimInput> {
 
-        let stream = TokenStream::parse_string(&(self.input_content))?;
+        let stream = TokenStream::parse_string(&(self.content))?;
         let seed_count: Option<usize> = mseeds .as_ref().map(|v|v.len());
         let case_count: Option<usize> = mncases.as_ref().map(|v|v.len());
         let n = seed_count
@@ -636,7 +636,7 @@ impl fmt::Display for SingSimReport {
 
 impl fmt::Display for SingSimInput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        writeln!(f, "{}", self.input_content)?;
+        writeln!(f, "{}", self.content)?;
         writeln!(f, "Filename: {}", self.input_filename)?;
         writeln!(f, "Application: {}", self.application)?;
         writeln!(f, "Pegsfile: {}", self.pegsfile)?;

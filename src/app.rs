@@ -237,11 +237,11 @@ impl SubCmd for ViewConfig {
 impl ViewConfig {
     fn run_json(&self) -> Result<()> {
         let report: ParSimReport = load(&self.path)?;
-        let input_content = report.input.prototype.input_content;
+        let content = report.input.prototype.content;
         let filestem = report.input.prototype.checksum;
         let filename = format!("{}.egsinp", filestem);
         let mut file = fs::File::create(&filename).map_err(debug_string)?;
-        file.write_all(input_content.as_bytes())
+        file.write_all(content.as_bytes())
             .map_err(debug_string)?;
         let out = self.run_egsinp(&filename);
         fs::remove_file(filename).map_err(debug_string)?;

@@ -77,7 +77,7 @@ mod tests {
         assert_eq!(r.input.ncases,vec![173, 200]);
         let outs = r.outputs.into_result().unwrap();
         let s:String = outs[0].clone().input.into_result().unwrap()
-            .input_content;
+            .content;
         assert!(s.contains("173"));
         assert!(s.contains("1983 324"));
     }
