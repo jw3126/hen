@@ -12,7 +12,7 @@ use std;
 use uncertain::UncertainF64;
 use output_parser;
 use std::fmt;
-use util::Result;
+use util::{Result,debug_string};
 use util;
 use std::result::Result as StdResult;
 
@@ -24,6 +24,75 @@ pub struct SingSimInput {
     pub input_content: String,
     pub pegsfile: String,
     pub checksum: String,
+    pub input_filename: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SingSimInputBuilder {
+    application:   Option<String>,
+    input_content: Option<String>,
+    pegsfile:      Option<String>,
+    input_filename:Option<String>,
+}
+
+impl SingSimInputBuilder {
+    pub fn new() -> Self {
+        SingSimInputBuilder {
+            application: None,
+            input_content: None,
+            pegsfile: None,
+            input_filename: None,
+        }
+    }
+
+    pub fn application(mut self, app:&str) -> Self {
+        self.application = Some(app.to_string());
+        self
+    }
+
+    pub fn input_content(mut self, s:&str) -> Self {
+        self.input_content = Some(s.to_string());
+        self
+    }
+
+    pub fn input_filename(mut self, s:&str) -> Self {
+        self.input_filename = Some(s.to_string());
+        self
+    }
+
+    pub fn pegsfile(mut self, s:&str) -> Self {
+        self.pegsfile = Some(s.to_string());
+        self
+    }
+
+    fn get_checksum(&self) -> Option<String> {
+        if let &Some(ref input_content) = &self.input_content {
+            let digest = sha3::Sha3_256::digest(input_content.as_bytes());
+            let checksum = format!("{:x}", digest);
+            Some(checksum)
+        } else {
+            None
+        }
+    }
+
+    pub fn build(self) -> Result<SingSimInput> {
+        let checksum = (&self)
+            .get_checksum()
+            .ok_or("Cannot compute checksum. Are all fields of builder set?")?;
+
+        match self { 
+            SingSimInputBuilder {
+                application:Some(application),
+                input_content:Some(input_content),
+                pegsfile:Some(pegsfile),
+                input_filename:Some(input_filename),
+            } => {
+                let sim = SingSimInput {application, input_content,
+                    pegsfile, checksum, input_filename};
+                Ok(sim)},
+            _ => Err("All fields of builder should be set.".to_string())
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -89,8 +158,13 @@ impl ParSimInput {
         let streams = stream.split(&self.seeds, &self.ncases)?;
         let application = &self.prototype.application;
         let pegsfile = &self.prototype.pegsfile;
-        let create_sim = |content: String| {
-            SingSimInput::new(application.clone(), content.clone(), pegsfile.clone())
+        let create_sim = |input_content: String| {
+            SingSimInputBuilder::new()
+                .application(application)
+                .input_content(&input_content)
+                .pegsfile(pegsfile)
+                .input_filename(&self.prototype.input_filename)
+                .build().unwrap()
         };
         let results: Vec<SingSimFinished> = streams
             .par_iter()
@@ -147,28 +221,22 @@ fn egs_home_path() -> PathBuf {
 }
 
 impl SingSimInput {
-    pub fn new(application: String, input_content: String, pegsfile: String) -> Self {
-        let digest = sha3::Sha3_256::digest(input_content.as_bytes());
-        let checksum = format!("{:x}", digest);
-        let sim = SingSimInput {
-            application,
-            input_content,
-            pegsfile,
-            checksum,
-        };
-        return sim;
-    }
 
     pub fn from_egsinp_path(application: &str, path: &Path, pegsfile: &str) -> Result<Self> {
         let mut file = File::open(path).map_err(|err| format!("{:?}", err))?;
-        let mut content = String::new();
-        file.read_to_string(&mut content)
-            .map_err(|err| format!("{:?}", err))?;
-        return Ok(Self::new(
-            application.to_string(),
-            content,
-            pegsfile.to_string(),
-        ));
+        let mut input_content = String::new();
+        let input_filename = path.file_name()
+            .ok_or("Error getting file_name")?
+            .to_str().unwrap();
+        file.read_to_string(&mut input_content)
+            .map_err(debug_string)?;
+        let sim = SingSimInputBuilder::new()
+            .pegsfile(pegsfile)
+            .input_filename(input_filename)
+            .application(application)
+            .input_content(&input_content)
+            .build().unwrap();
+        Ok(sim)
     }
 
     fn run_cmd(&self) -> std::io::Result<Output> {
