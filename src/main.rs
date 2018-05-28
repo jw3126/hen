@@ -32,6 +32,8 @@ mod output_parser;
 mod util;
 mod uncertain;
 mod app;
+
+#[cfg(test)]
 mod tests;
 
 use app::app_main;
