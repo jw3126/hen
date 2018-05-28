@@ -144,7 +144,7 @@ pub struct ParSimFinished {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParSimReport {
     pub input: ParSimInput,
-    pub outputs: Omitable<Vec<SingSimReport>>,
+    pub single_runs: Vec<SingSimReport>,
 
     pub total_cpu_time: Omitable<f64>,
     pub simulation_finished: Omitable<bool>,
@@ -166,7 +166,7 @@ impl ParSimInput {
                 .filename(&self.prototype.filename)
                 .build().unwrap()
         };
-        let results: Vec<SingSimFinished> = streams
+        let outputs: Vec<SingSimFinished> = streams
             .par_iter()
             .map(|s| s.to_string())
             .map(create_sim)
@@ -174,7 +174,7 @@ impl ParSimInput {
             .collect();
         let ret = ParSimFinished {
             input: self.clone(),
-            outputs: results,
+            outputs,
         };
         return Ok(ret);
     }
@@ -421,31 +421,29 @@ impl ParSimFinished {
     pub fn report(&self) -> ParSimReport {
         // util::save(Path::new("fin_par_sim.json"), self);
         // we want the first run to be detailed
-        let mut outputs: Vec<SingSimReport> =
+        let mut single_runs: Vec<SingSimReport> =
             self.outputs.iter().map(SingSimFinished::report).collect();
-        outputs[0] = self.outputs[0].report_full();
-        let total_cpu_time = outputs
+        single_runs[0] = self.outputs[0].report_full();
+        let total_cpu_time = single_runs
             .iter()
             .map(|o| o.total_cpu_time.clone())
             .fold(Omitable::Available(0.), |t1, t2| {
                 Omitable::map2(|x, y| x + y, t1, t2)
             });
 
-        let simulation_finished = outputs
+        let simulation_finished = single_runs
             .iter()
             .map(|o| o.simulation_finished.clone())
             .fold(Omitable::Available(true), |t1, t2| {
                 Omitable::map2(|x, y| x & y, t1, t2)
             });
 
-        let dose = Omitable::from_result(Self::compute_dose(&outputs));
+        let dose = Omitable::from_result(Self::compute_dose(&single_runs));
 
         ParSimReport {
             input: self.input.clone(),
-            outputs: Omitable::Available(outputs),
-            total_cpu_time,
-            simulation_finished,
-            dose,
+            single_runs,
+            total_cpu_time,simulation_finished,dose,
         }
     }
 
@@ -523,16 +521,12 @@ impl ParSimReport {
     }
 
     pub fn to_string_first_sing_sim(&self) -> String {
-        match self.outputs {
-            Omitable::Fail(ref err) => err.clone(),
-            Omitable::Omitted   => "".to_string(),
-            Omitable::Available(ref v) => {
-                if v.len() == 0 {
-                    "".to_string()
-                } else {
-                    format!("{}", v[0]).to_string()
-                }
-            },
+        let v = &self.single_runs;
+
+        if v.len() == 0 {
+            "".to_string()
+        } else {
+            format!("{}", v[0]).to_string()
         }
     }
 

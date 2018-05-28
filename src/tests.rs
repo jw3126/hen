@@ -75,7 +75,7 @@ mod tests {
         let r: ParSimReport = load(&output_path).unwrap();
         assert_eq!(r.input.seeds,vec![(1983,324),(3,4)]);
         assert_eq!(r.input.ncases,vec![173, 200]);
-        let outs = r.outputs.into_result().unwrap();
+        let outs = r.single_runs;
         let s:String = outs[0].clone().input.into_result().unwrap()
             .content;
         assert!(s.contains("173"));
