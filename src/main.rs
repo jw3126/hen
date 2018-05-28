@@ -8,6 +8,9 @@ extern crate sha3;
 extern crate assert_cli;
 
 #[cfg(test)]
+extern crate tempfile;
+
+#[cfg(test)]
 #[macro_use]
 extern crate approx;
 
@@ -32,10 +35,17 @@ mod app;
 mod tests;
 
 use app::app_main;
+use std::io::Write;
+
+pub fn error(msg: &str) {
+    writeln!(&mut std::io::stderr(), "Error:\n{}", msg).expect("Failed writeln! to stderr");
+    std::process::exit(1);
+    //panic!();
+}
 
 fn main() {
     match app_main() {
         Ok(_) => {}
-        Err(err) => panic!(err),
+        Err(err) => error(&err)
     }
 }
