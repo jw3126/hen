@@ -637,6 +637,7 @@ impl fmt::Display for SingSimReport {
 impl fmt::Display for SingSimInput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.input_content)?;
+        writeln!(f, "Filename: {}", self.input_filename)?;
         writeln!(f, "Application: {}", self.application)?;
         writeln!(f, "Pegsfile: {}", self.pegsfile)?;
         write!(f, "Checksum: {}", self.checksum)
