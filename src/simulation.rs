@@ -24,7 +24,7 @@ pub struct SingSimInput {
     pub content: String,
     pub pegsfile: String,
     pub checksum: String,
-    pub input_filename: String,
+    pub filename: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -32,7 +32,7 @@ pub struct SingSimInputBuilder {
     application:   Option<String>,
     content: Option<String>,
     pegsfile:      Option<String>,
-    input_filename:Option<String>,
+    filename:Option<String>,
 }
 
 impl SingSimInputBuilder {
@@ -41,7 +41,7 @@ impl SingSimInputBuilder {
             application: None,
             content: None,
             pegsfile: None,
-            input_filename: None,
+            filename: None,
         }
     }
 
@@ -55,8 +55,8 @@ impl SingSimInputBuilder {
         self
     }
 
-    pub fn input_filename(mut self, s:&str) -> Self {
-        self.input_filename = Some(s.to_string());
+    pub fn filename(mut self, s:&str) -> Self {
+        self.filename = Some(s.to_string());
         self
     }
 
@@ -85,10 +85,10 @@ impl SingSimInputBuilder {
                 application:Some(application),
                 content:Some(content),
                 pegsfile:Some(pegsfile),
-                input_filename:Some(input_filename),
+                filename:Some(filename),
             } => {
                 let sim = SingSimInput {application, content,
-                    pegsfile, checksum, input_filename};
+                    pegsfile, checksum, filename};
                 Ok(sim)},
             _ => Err("All fields of builder should be set.".to_string())
         }
@@ -163,7 +163,7 @@ impl ParSimInput {
                 .application(application)
                 .content(&content)
                 .pegsfile(pegsfile)
-                .input_filename(&self.prototype.input_filename)
+                .filename(&self.prototype.filename)
                 .build().unwrap()
         };
         let results: Vec<SingSimFinished> = streams
@@ -225,14 +225,14 @@ impl SingSimInput {
     pub fn from_egsinp_path(application: &str, path: &Path, pegsfile: &str) -> Result<Self> {
         let mut file = File::open(path).map_err(|err| format!("{:?}", err))?;
         let mut content = String::new();
-        let input_filename = path.file_name()
+        let filename = path.file_name()
             .ok_or("Error getting file_name")?
             .to_str().unwrap();
         file.read_to_string(&mut content)
             .map_err(debug_string)?;
         let sim = SingSimInputBuilder::new()
             .pegsfile(pegsfile)
-            .input_filename(input_filename)
+            .filename(filename)
             .application(application)
             .content(&content)
             .build().unwrap();
@@ -637,7 +637,7 @@ impl fmt::Display for SingSimReport {
 impl fmt::Display for SingSimInput {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.content)?;
-        writeln!(f, "Filename: {}", self.input_filename)?;
+        writeln!(f, "Filename: {}", self.filename)?;
         writeln!(f, "Application: {}", self.application)?;
         writeln!(f, "Pegsfile: {}", self.pegsfile)?;
         write!(f, "Checksum: {}", self.checksum)
