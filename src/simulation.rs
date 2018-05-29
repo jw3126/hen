@@ -428,82 +428,93 @@ impl ParSimFinished {
         let mut single_runs: Vec<SingSimReport> =
             self.outputs.iter().map(SingSimFinished::report).collect();
         single_runs[0] = self.outputs[0].report_full();
-        let total_cpu_time = single_runs
-            .iter()
-            .map(|o| o.total_cpu_time.clone())
-            .fold(Omitable::Available(0.), |t1, t2| {
-                Omitable::map2(|x, y| x + y, t1, t2)
-            });
 
-        let simulation_finished = single_runs
-            .iter()
-            .map(|o| o.simulation_finished.clone())
-            .fold(Omitable::Available(true), |t1, t2| {
-                Omitable::map2(|x, y| x & y, t1, t2)
-            });
-
-        let dose = Omitable::from_result(Self::compute_dose(&single_runs));
-
-        ParSimReport {
-            input: self.input.clone(),
+        let input = self.input.clone();
+        let total_cpu_time = Omitable::Omitted;
+        let simulation_finished = Omitable::Omitted;
+        let dose = Omitable::Omitted;
+        let ret = ParSimReport {
+            input,
             single_runs,
             total_cpu_time,simulation_finished,dose,
-        }
-    }
-
-    fn compute_dose(reports: &[SingSimReport]) -> Result<Vec<(String, UncertainF64)>> {
-        let doses1: Vec<Result<Vec<(String, UncertainF64)>>> = reports
-            .iter()
-            .map(|o| o.dose.clone().into_result())
-            .collect();
-        let doses2 = traverse_result(doses1)?;
-        if doses2.is_empty() {
-            return Ok(Vec::new());
         };
-        let mut ret = doses2[0].clone();
-        let nruns = doses2.len();
-        for i_run in 1..nruns {
-            if doses2[i_run].len() != ret.len() {
-                let msg = "Simulations have inconsistend 
-                    numbers of scoring geometries."
-                    .to_string();
-                return Err(msg);
-            }
-            for i_reg in 0..ret.len() {
-                let d_new = {
-                    let (ref s_inc, ref d_inc) = doses2[i_run][i_reg];
-                    let (ref s_ret, ref d_ret) = ret[i_reg];
-                    if *s_inc == *s_ret {
-                        *d_ret + *d_inc
-                    } else {
-                        let msg = "Simulation have inconsistent scoring regions
-                        "
-                            .to_string();
-                        Err(msg)?
-                    }
-                };
-                ret[i_reg].1 = d_new;
-            }
-        }
-        let wt = UncertainF64::from_value_var(1. / (nruns as f64), 0.);
-        // normalize
-        ret = ret.iter()
-            .map(|&(ref label, ref dose)| (label.to_string(), *dose * wt))
-            .collect();
-        Ok(ret)
-    }
-
-    pub fn merge(&self, other:&ParSimFinished) -> Result<ParSimFinished> {
-        let input = self.input.merge(&other.input)?;
-        let mut outputs = Vec::new();
-        outputs.extend(self.outputs.clone());
-        outputs.extend(other.outputs.clone());
-        let ret = ParSimFinished {input, outputs};
-        Ok(ret)
+        let ret = ret.recalculate();
+        ret
     }
 }
 
+fn compute_total_cpu_time(single_runs:&[SingSimReport]) -> Omitable<f64> {
+    single_runs.iter()
+    .map(|o| o.total_cpu_time.clone())
+    .fold(Omitable::Available(0.), |t1, t2| {
+        Omitable::map2(|x, y| x + y, t1, t2)
+    })
+}
+
+fn compute_simulation_finished(single_runs:&[SingSimReport]) -> Omitable<bool> {
+    single_runs.iter()
+        .map(|o| o.simulation_finished.clone())
+        .fold(Omitable::Available(true), |t1, t2| {
+            Omitable::map2(|x, y| x & y, t1, t2)
+        })
+}
+
+fn compute_dose(single_runs: &[SingSimReport]) -> Omitable<Vec<(String, UncertainF64)>> {
+    Omitable::from_result(compute_dose_result(&single_runs))
+}
+
+fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, UncertainF64)>> {
+    let doses1: Vec<Result<Vec<(String, UncertainF64)>>> = reports
+        .iter()
+        .map(|o| o.dose.clone().into_result())
+        .collect();
+    let doses2 = traverse_result(doses1)?;
+    if doses2.is_empty() {
+        return Ok(Vec::new());
+    };
+    let mut ret = doses2[0].clone();
+    let nruns = doses2.len();
+    for i_run in 1..nruns {
+        if doses2[i_run].len() != ret.len() {
+            let msg = "Simulations have inconsistend 
+                numbers of scoring geometries."
+                .to_string();
+            return Err(msg);
+        }
+        for i_reg in 0..ret.len() {
+            let d_new = {
+                let (ref s_inc, ref d_inc) = doses2[i_run][i_reg];
+                let (ref s_ret, ref d_ret) = ret[i_reg];
+                if *s_inc == *s_ret {
+                    *d_ret + *d_inc
+                } else {
+                    let msg = "Simulation have inconsistent scoring regions
+                    "
+                        .to_string();
+                    Err(msg)?
+                }
+            };
+            ret[i_reg].1 = d_new;
+        }
+    }
+    let wt = UncertainF64::from_value_var(1. / (nruns as f64), 0.);
+    // normalize
+    ret = ret.iter()
+        .map(|&(ref label, ref dose)| (label.to_string(), *dose * wt))
+        .collect();
+    Ok(ret)
+}
+
 impl ParSimReport {
+    pub fn recalculate(self) -> Self {
+        let ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished}
+        = self;
+        let dose = compute_dose(&single_runs);
+        let total_cpu_time = compute_total_cpu_time(&single_runs);
+        let simulation_finished = compute_simulation_finished(&single_runs);
+        ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished}
+    }
+
     pub fn to_string_smart(&self) -> String {
         format!("{}", self)
     }
