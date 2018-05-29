@@ -14,6 +14,9 @@ use std;
 use std::ffi::OsStr;
 use serde_json;
 
+mod argmatch_util;
+use app::argmatch_util::GetMatch;
+
 fn create_app() -> clap::App<'static, 'static> {
     clap::App::new("hen")
         .author(crate_authors!())
@@ -221,13 +224,13 @@ impl SplitConfig {
 }
 
 impl SubCmd for SplitConfig {
-    fn parse(matches: &ArgMatches) -> Result<Self> {
-        let outputpath = abspath_from_argmatches(matches, "OUTPUT")?;
-        let inputpath = abspath_from_argmatches(matches, "INPUT")?;
-        let nfiles = parse_from_argmatches(matches, "NFILES")?;
-        let nthreads = parse_from_argmatches(matches, "NTHREADS")?;
-        let application = matches.value_of("APPLICATION").unwrap().to_string();
-        let pegsfile = matches.value_of("PEGSFILE").unwrap().to_string();
+    fn parse(m: &ArgMatches) -> Result<Self> {
+        let outputpath = m.get_abspath("OUTPUT")?;
+        let inputpath = m.get_abspath("INPUT")?;
+        let nfiles = m.get_parse("NFILES")?;
+        let nthreads = m.get_parse("NTHREADS")?;
+        let application = m.get_string("APPLICATION")?;
+        let pegsfile = m.get_string("PEGSFILE")?;
         let ret = SplitConfig { inputpath, outputpath, nthreads, nfiles, application, pegsfile};
         ret.validate()?;
         Ok(ret)
@@ -236,6 +239,7 @@ impl SubCmd for SplitConfig {
     fn run(&self) -> Result<()> {
         let prototype = SingSimInput::from_egsinp_path(&self.application,
                                                        &self.inputpath, &self.pegsfile)?;
+        println!("{:?}", self);
         let n = self.nthreads * self.nfiles;
         let ParSimInput {prototype, seeds, ncases} = prototype.splitn(n)?;
         let chunksize = self.nthreads;
@@ -245,14 +249,14 @@ impl SubCmd for SplitConfig {
             .ok_or("Cannot get file_stem".to_string())?
             .to_str().ok_or("to_str failed")?
             .to_string();
-        let dir = &self.inputpath.parent()
-            .ok_or("Cannot get parent of input_path".to_string())?;
         for (i, (ncase, seed)) in ncases.zip(seeds).enumerate() {
             let filename = format!("{}_{}.heninp",filestem,i).to_string();
-            let path = dir.join(filename);
+            let path = self.outputpath.join(filename);
             let psim = ParSimInput {prototype:prototype.clone(),
                 ncases:ncase.to_vec(),
                 seeds:seed.to_vec()};
+            println!("{:?}", i);
+            println!("{:?}", path);
             save(&path, &psim)?;
         }
         Ok(())
@@ -265,8 +269,8 @@ struct FormatConfig {
 }
 
 impl SubCmd for FormatConfig {
-    fn parse(matches: &ArgMatches) -> Result<Self> {
-        let path = abspath_from_argmatches(matches,"PATH")?;
+    fn parse(m: &ArgMatches) -> Result<Self> {
+        let path = m.get_abspath("PATH")?;
         Ok(Self { path })
     }
 
@@ -290,9 +294,9 @@ struct RerunConfig {
 }
 
 impl SubCmd for RerunConfig {
-    fn parse(matches: &ArgMatches) -> Result<RerunConfig> {
-        let path = abspath_from_argmatches(matches, "PATH")?;
-        let outputpath = abspath_from_argmatches(matches,"OUTPUT")?;
+    fn parse(m: &ArgMatches) -> Result<RerunConfig> {
+        let path = m.get_abspath("PATH")?;
+        let outputpath = m.get_abspath("OUTPUT")?;
         Ok(RerunConfig { path, outputpath })
     }
 
@@ -311,8 +315,8 @@ struct ViewConfig {
 }
 
 impl SubCmd for ViewConfig {
-    fn parse(matches: &ArgMatches) -> Result<ViewConfig> {
-        let path = abspath_from_argmatches(matches, "PATH")?;
+    fn parse(m: &ArgMatches) -> Result<ViewConfig> {
+        let path = m.get_abspath("PATH")?;
         Ok(ViewConfig { path })
     }
 
@@ -388,9 +392,9 @@ struct ShowConfig {
 }
 
 impl SubCmd for ShowConfig {
-    fn parse(matches: &ArgMatches) -> Result<ShowConfig> {
-        let path = abspath_from_argmatches(matches, "PATH")?;
-        let what = value_t!(matches, "WHAT", ShowWhat).map_err(debug_string)?;
+    fn parse(m: &ArgMatches) -> Result<ShowConfig> {
+        let path = m.get_abspath("PATH")?;
+        let what = value_t!(m, "WHAT", ShowWhat).map_err(debug_string)?;
         Ok(ShowConfig { path, what })
     }
 
@@ -479,58 +483,26 @@ impl RunConfig {
     }
 }
 
-fn parse_from_argmatches<T>(m:&ArgMatches, key:&str) -> Result<T> 
-    where T: std::str::FromStr {
-
-    let s =  m.value_of("key")
-        .ok_or(format!("ArgMatches do not contain {}",key).to_string())?;
-    let ret = s
-        .parse::<T>()
-        .map_err(|_| format!("Cannot parse {} from {}",key,s).to_string())?;
-    Ok(ret)
-}
-
-fn abspath_from_argmatches(m:&ArgMatches, key: &str) -> Result<PathBuf> {
-    let s = m.value_of(key)
-        .ok_or(format!("ArgMatches do not contain {}", key).to_string())?;
-    abspath_from_string(s)
-}
-
-fn abspath_from_string(s: &str) -> Result<PathBuf> {
-    let isabs = Path::new(s).is_absolute();
-    let mut path = PathBuf::new();
-    if isabs {
-        path.push(s);
-    } else {
-        let dir = current_dir().map_err(|e| format!("{:?}", e))?;
-        path.push(dir);
-        path.push(s);
-    }
-    Ok(path)
-}
-
 impl SubCmd for RunConfig {
-    fn parse(matches: &ArgMatches) -> Result<RunConfig> {
-        let inputpath = abspath_from_argmatches(matches,"INPUT")?;
+    fn parse(m: &ArgMatches) -> Result<RunConfig> {
+        let inputpath = m.get_abspath("INPUT")?;
         let dir = inputpath.is_dir();
-        let outputpath = abspath_from_argmatches(matches,"OUTPUT")?;
-        let application = matches.value_of("APPLICATION")
-            .unwrap().to_string();
-        let pegsfile = matches.value_of("PEGSFILE")
-            .unwrap().to_string();
-        let nthreads = parse_from_argmatches(matches,"NTHREADS")
+        let outputpath = m.get_abspath("OUTPUT")?;
+        let application = m.get_string("APPLICATION")?;
+        let pegsfile = m.get_string("PEGSFILE")?;
+        let nthreads = m.get_parse("NTHREADS")
             .unwrap_or(num_cpus::get());
-        let seeds = match matches.value_of("SEEDS") {
-            None => None,
-            Some(s) => {
+        let seeds = match m.get("SEEDS") {
+            Err(_) => None,
+            Ok(s) => {
                 let v:Vec<Seed> = serde_json::from_str(s)
                     .map_err(|_|"Cannot parse SEEDS".to_string())?;
                 Some(v)
             }
         };
-        let ncases = match matches.value_of("NCASES") {
-            None => None,
-            Some(s) => {
+        let ncases = match m.get("NCASES") {
+            Err(_) => None,
+            Ok(s) => {
                 let v:Vec<u64> = serde_json::from_str(s)
                     .map_err(|_|"Cannot parse NCASES".to_string())?;
                 Some(v)
@@ -564,6 +536,7 @@ pub fn app_main() -> Result<()> {
         ("view", Some(m)) => ViewConfig::main(m),
         ("rerun", Some(m)) => RerunConfig::main(m),
         ("fmt", Some(m)) => FormatConfig::main(m),
+        ("split", Some(m)) => SplitConfig::main(m),
         ("", _) => Err("Try hen --help".to_string()),
         x => Err(format!("Unknown subcommand {:?}. Try hen --help", x).to_string()),
     }
