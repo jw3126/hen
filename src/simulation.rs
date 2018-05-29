@@ -293,6 +293,10 @@ impl SingSimInput {
         }
     }
 
+    pub fn splitn(self, n:usize) -> Result<ParSimInput> {
+        self.split_fancy(None,None,n)
+    }
+
     pub fn split_fancy(self, mncases: Option<Vec<u64>>, mseeds: Option<Vec<Seed>>, 
                        nthreads:usize) -> Result<ParSimInput> {
 

@@ -2,7 +2,7 @@ use clap::{Arg, ArgMatches, SubCommand};
 use clap;
 use std::path::{Path, PathBuf};
 use num_cpus;
-use simulation::{ParSimReport, SingSimInput, Seed};
+use simulation::{ParSimReport, SingSimInput, Seed, ParSimInput};
 use std::env::current_dir;
 use util::{debug_string, load, save, Result};
 use std::fs;
@@ -32,20 +32,20 @@ fn create_app() -> clap::App<'static, 'static> {
                         .help("Name of the input file."),
                 )
                 .arg(
-                    Arg::with_name("PEGSFILE")
-                        .short("p")
-                        .long("pegsfile")
-                        .help("Name of the pegsfile.")
-                        .default_value("521icru")
-                        .takes_value(true),
-                )
-                .arg(
                     Arg::with_name("OUTPUT")
                         .short("o")
                         .long("output")
                         .takes_value(true)
                         .help("Name of the output file.")
                         .required(true), // TODO guess it
+                )
+                .arg(
+                    Arg::with_name("PEGSFILE")
+                        .short("p")
+                        .long("pegsfile")
+                        .help("Name of the pegsfile.")
+                        .default_value("521icru")
+                        .takes_value(true),
                 )
                 .arg(
                     Arg::with_name("APPLICATION")
@@ -134,6 +134,57 @@ fn create_app() -> clap::App<'static, 'static> {
                         .index(1),
                 ),
         )
+        .subcommand(
+            SubCommand::with_name("split")
+                .version(crate_version!())
+                .author(crate_authors!())
+                .about("Split .egsinp file into chunks that are runnable on a cluster.")
+                .arg(
+                    Arg::with_name("INPUT")
+                        .help("Path to a input file that should be split.")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("NFILES")
+                        .long("nfiles")
+                        .help("Number of files that an input file should be split into.")
+                        .required(true)
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("NTHREADS")
+                        .long("nthreads")
+                        .short("t")
+                        .help("Number of threads that should be used for the simulation on each machine.")
+                        .required(true)
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("OUTPUT")
+                        .short("o")
+                        .long("output")
+                        .takes_value(true)
+                        .help("Path to directory, where output should be saved.")
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("PEGSFILE")
+                        .short("p")
+                        .long("pegsfile")
+                        .help("Name of the pegsfile.")
+                        .default_value("521icru")
+                        .takes_value(true),
+                )
+                .arg(
+                    Arg::with_name("APPLICATION")
+                        .short("a")
+                        .long("app")
+                        .help("Name of the application.")
+                        .default_value("egs_chamber")
+                        .takes_value(true),
+                ),
+        )
 }
 
 trait SubCmd
@@ -148,14 +199,74 @@ where
 }
 
 #[derive(Debug)]
+struct SplitConfig {
+    outputpath: PathBuf,
+    inputpath: PathBuf,
+    nthreads: usize,
+    nfiles: usize,
+    application: String,
+    pegsfile: String,
+}
+
+impl SplitConfig {
+    fn validate(&self) -> Result<()> {
+        if self.nthreads == 0 {
+            return Err("NTHREADS > 0 must hold.".to_string())
+        }
+        if self.nfiles == 0 {
+            return Err("NFILES > 0 must hold.".to_string())
+        }
+        Ok(())
+    }
+}
+
+impl SubCmd for SplitConfig {
+    fn parse(matches: &ArgMatches) -> Result<Self> {
+        let outputpath = abspath_from_argmatches(matches, "OUTPUT")?;
+        let inputpath = abspath_from_argmatches(matches, "INPUT")?;
+        let nfiles = parse_from_argmatches(matches, "NFILES")?;
+        let nthreads = parse_from_argmatches(matches, "NTHREADS")?;
+        let application = matches.value_of("APPLICATION").unwrap().to_string();
+        let pegsfile = matches.value_of("PEGSFILE").unwrap().to_string();
+        let ret = SplitConfig { inputpath, outputpath, nthreads, nfiles, application, pegsfile};
+        ret.validate()?;
+        Ok(ret)
+    }
+
+    fn run(&self) -> Result<()> {
+        let prototype = SingSimInput::from_egsinp_path(&self.application,
+                                                       &self.inputpath, &self.pegsfile)?;
+        let n = self.nthreads * self.nfiles;
+        let ParSimInput {prototype, seeds, ncases} = prototype.splitn(n)?;
+        let chunksize = self.nthreads;
+        let seeds = seeds.chunks(chunksize);
+        let ncases = ncases.chunks(chunksize);
+        let filestem = &self.inputpath.file_stem()
+            .ok_or("Cannot get file_stem".to_string())?
+            .to_str().ok_or("to_str failed")?
+            .to_string();
+        let dir = &self.inputpath.parent()
+            .ok_or("Cannot get parent of input_path".to_string())?;
+        for (i, (ncase, seed)) in ncases.zip(seeds).enumerate() {
+            let filename = format!("{}_{}.heninp",filestem,i).to_string();
+            let path = dir.join(filename);
+            let psim = ParSimInput {prototype:prototype.clone(),
+                ncases:ncase.to_vec(),
+                seeds:seed.to_vec()};
+            save(&path, &psim)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
 struct FormatConfig {
     path: PathBuf,
 }
 
 impl SubCmd for FormatConfig {
     fn parse(matches: &ArgMatches) -> Result<Self> {
-        let spath = matches.value_of("PATH").unwrap();
-        let path = abspath_from_string(spath)?;
+        let path = abspath_from_argmatches(matches,"PATH")?;
         Ok(Self { path })
     }
 
@@ -180,10 +291,8 @@ struct RerunConfig {
 
 impl SubCmd for RerunConfig {
     fn parse(matches: &ArgMatches) -> Result<RerunConfig> {
-        let spath = matches.value_of("PATH").unwrap();
-        let path = abspath_from_string(spath)?;
-        let soutputpath = matches.value_of("OUTPUT").unwrap();
-        let outputpath = abspath_from_string(soutputpath)?;
+        let path = abspath_from_argmatches(matches, "PATH")?;
+        let outputpath = abspath_from_argmatches(matches,"OUTPUT")?;
         Ok(RerunConfig { path, outputpath })
     }
 
@@ -203,8 +312,7 @@ struct ViewConfig {
 
 impl SubCmd for ViewConfig {
     fn parse(matches: &ArgMatches) -> Result<ViewConfig> {
-        let spath = matches.value_of("PATH").unwrap();
-        let path = abspath_from_string(spath)?;
+        let path = abspath_from_argmatches(matches, "PATH")?;
         Ok(ViewConfig { path })
     }
 
@@ -281,8 +389,7 @@ struct ShowConfig {
 
 impl SubCmd for ShowConfig {
     fn parse(matches: &ArgMatches) -> Result<ShowConfig> {
-        let spath = matches.value_of("PATH").unwrap();
-        let path = abspath_from_string(spath)?;
+        let path = abspath_from_argmatches(matches, "PATH")?;
         let what = value_t!(matches, "WHAT", ShowWhat).map_err(debug_string)?;
         Ok(ShowConfig { path, what })
     }
@@ -309,19 +416,6 @@ struct RunConfig {
     ncases: Option<Vec<u64>>,
     nthreads: usize,
     dir: bool, // run all files in a directory
-}
-
-fn abspath_from_string(s: &str) -> Result<PathBuf> {
-    let isabs = Path::new(s).is_absolute();
-    let mut path = PathBuf::new();
-    if isabs {
-        path.push(s);
-    } else {
-        let dir = current_dir().map_err(|e| format!("{:?}", e))?;
-        path.push(dir);
-        path.push(s);
-    }
-    Ok(path)
 }
 
 impl RunConfig {
@@ -385,21 +479,47 @@ impl RunConfig {
     }
 }
 
+fn parse_from_argmatches<T>(m:&ArgMatches, key:&str) -> Result<T> 
+    where T: std::str::FromStr {
+
+    let s =  m.value_of("key")
+        .ok_or(format!("ArgMatches do not contain {}",key).to_string())?;
+    let ret = s
+        .parse::<T>()
+        .map_err(|_| format!("Cannot parse {} from {}",key,s).to_string())?;
+    Ok(ret)
+}
+
+fn abspath_from_argmatches(m:&ArgMatches, key: &str) -> Result<PathBuf> {
+    let s = m.value_of(key)
+        .ok_or(format!("ArgMatches do not contain {}", key).to_string())?;
+    abspath_from_string(s)
+}
+
+fn abspath_from_string(s: &str) -> Result<PathBuf> {
+    let isabs = Path::new(s).is_absolute();
+    let mut path = PathBuf::new();
+    if isabs {
+        path.push(s);
+    } else {
+        let dir = current_dir().map_err(|e| format!("{:?}", e))?;
+        path.push(dir);
+        path.push(s);
+    }
+    Ok(path)
+}
+
 impl SubCmd for RunConfig {
     fn parse(matches: &ArgMatches) -> Result<RunConfig> {
-        let sinputpath = matches.value_of("INPUT").unwrap();
-        let inputpath = abspath_from_string(sinputpath)?;
+        let inputpath = abspath_from_argmatches(matches,"INPUT")?;
         let dir = inputpath.is_dir();
-        let soutputpath = matches.value_of("OUTPUT").unwrap();
-        let outputpath = abspath_from_string(soutputpath)?;
-        let application = matches.value_of("APPLICATION").unwrap().to_string();
-        let pegsfile = matches.value_of("PEGSFILE").unwrap().to_string();
-        let nthreads = match matches.value_of("NTHREADS") {
-            None => num_cpus::get(),
-            Some(snthreads) => snthreads
-                .parse::<usize>()
-                .map_err(|_| "Cannot parse NTHREADS".to_string())?,
-        };
+        let outputpath = abspath_from_argmatches(matches,"OUTPUT")?;
+        let application = matches.value_of("APPLICATION")
+            .unwrap().to_string();
+        let pegsfile = matches.value_of("PEGSFILE")
+            .unwrap().to_string();
+        let nthreads = parse_from_argmatches(matches,"NTHREADS")
+            .unwrap_or(num_cpus::get());
         let seeds = match matches.value_of("SEEDS") {
             None => None,
             Some(s) => {

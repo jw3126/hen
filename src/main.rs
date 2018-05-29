@@ -3,6 +3,7 @@ extern crate rand;
 extern crate rayon;
 extern crate regex;
 extern crate sha3;
+extern crate itertools;
 
 #[cfg(test)]
 extern crate assert_cli;
