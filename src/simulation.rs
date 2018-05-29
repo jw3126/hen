@@ -247,7 +247,7 @@ impl SingSimInput {
             .args(&["-i", self.checksum.as_str(), "-p", self.pegsfile.as_str()])
             .output();
 
-        return ret;
+        ret
     }
 
     pub fn run(&self) -> SingSimFinished {

@@ -40,7 +40,7 @@
     simulation source = the_source
 :stop source definition:
 :start run control:
-    ncase = 10000
+    ncase = 5000
     nbatch = 10
 :stop run control:
 :start rng definition:

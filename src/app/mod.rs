@@ -441,17 +441,27 @@ impl RunConfig {
         SingSimInput::from_egsinp_path(&self.application, input_path, &self.pegsfile)
     }
 
-    fn run_egsinp(&self, input_path: &Path, output_path: &Path) -> Result<()> {
+    fn run_par_input(&self, p:&ParSimInput, output_path:&Path) -> Result<()> {
         match output_path.parent() {
             None => {}
             Some(d) => fs::create_dir_all(d).map_err(debug_string)?,
         };
-        let out = self.create_sing_sim_input(input_path)?
-            .split_fancy(self.ncases.clone(), self.seeds.clone(), self.nthreads)?
-            .run()?
+        let out = p.run()?
             .report();
         println!("{}", out);
         save(output_path, &out)
+    }
+
+    fn is_input_ext(s:&str) -> bool {
+        (s == "egsinp")|(s == "heninp")
+    }
+
+    fn has_input_ext(path:&Path) -> bool {
+        let ext = path.extension()
+            .unwrap_or(OsStr::new("fail"))
+            .to_str()
+            .unwrap_or("fail");
+        Self::is_input_ext(ext)
     }
 
     fn create_input_output_paths(&self) -> Result<Vec<(PathBuf, PathBuf)>> {
@@ -459,7 +469,7 @@ impl RunConfig {
             fs::read_dir(self.inputpath.clone())
                 .map_err(debug_string)?
                 .map(|entry| entry.unwrap().path())
-                .filter(|path| path.extension().unwrap_or(OsStr::new("fail")) == "egsinp")
+                .filter(|p|Self::has_input_ext(p))
                 .map(|inp| {
                     let filestem = inp.file_stem().unwrap();
                     let mut outp = self.outputpath.clone();
@@ -477,7 +487,18 @@ impl RunConfig {
     fn run(&self) -> Result<()> {
         let paths = self.create_input_output_paths()?;
         for (inp, outp) in paths {
-            self.run_egsinp(&inp, &outp)?;
+            let ext = inp.extension().unwrap_or(OsStr::new("fail")).
+                to_str().unwrap_or("fail");
+            let sim = match ext {
+                "heninp" => {
+                    load(&outp)?
+                }
+                _ => {
+                    self.create_sing_sim_input(&inp)?
+                        .split_fancy(self.ncases.clone(), self.seeds.clone(), self.nthreads)?
+                },
+            };
+            self.run_par_input(&sim, &outp)?;
         }
         Ok(())
     }

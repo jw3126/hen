@@ -1,6 +1,6 @@
-use util::{asset_path, load};
+use util::{asset_path, load, has_unique_elements};
 use std::path::Path;
-use simulation::ParSimReport;
+use simulation::{ParSimReport,ParSimInput,Seed};
 use assert_cli;
 use rand;
 use rand::Rng;
@@ -35,7 +35,7 @@ fn test_run_umlauts() {
 
 #[test]
 fn test_run_multiple_geometries() {
-    let input_path = asset_path().join("block2.egsinp");
+    let input_path = asset_path().join("three_calc_geos.egsinp");
     let sinput_path = input_path.to_str().unwrap();
     let output_path = tempdir().unwrap().path().join(randstring());
     let soutput_path = output_path.to_str().unwrap();
@@ -53,12 +53,12 @@ fn test_run_multiple_geometries() {
     assert_eq!(geo0, "the_cylinder");
     assert_eq!(geo1, "the_cylinder");
     assert_eq!(geo01, "the_cylinder");
-    assert!(((dose0.value() + dose1.value() / dose01.value()).abs() - 1.) < 0.01);
+    assert!(((dose0.value() + dose1.value() / dose01.value()).abs() - 1.) < 0.03);
 }
 
 #[test]
 fn test_run_custom_seeds_ncases() {
-    let input_path = asset_path().join("block2.egsinp");
+    let input_path = asset_path().join("three_calc_geos.egsinp");
     let sinput_path = input_path.to_str().unwrap();
     let output_path = tempdir().unwrap().path().join("output").join(randstring());
     let soutput_path = output_path.to_str().unwrap();
@@ -82,7 +82,7 @@ fn test_run_custom_seeds_ncases() {
 
 #[test]
 fn test_run_bad_pegs() {
-    let input_path = asset_path().join("block2.egsinp");
+    let input_path = asset_path().join("three_calc_geos.egsinp");
     let sinput_path = input_path.to_str().unwrap();
     let output_path = tempdir().unwrap().path().join(randstring());
     let soutput_path = output_path.to_str().unwrap();
@@ -122,7 +122,7 @@ fn test_run_many() {
 
 #[test]
 fn test_rerun() {
-    let input_path = asset_path().join("block.egsinp");
+    let input_path = asset_path().join("three_calc_geos.egsinp");
     let input_path = input_path.to_str().unwrap();
     // let output_dir = asset_path().join("output");
     let output_dir = tempdir().unwrap();
@@ -144,4 +144,39 @@ fn test_rerun() {
     assert!(r1 != r2);
     assert_eq!(r1.dose, r2.dose);
     r1.dose.into_result().unwrap();
+}
+
+#[test]
+fn test_split() {
+    let input_path = asset_path().join("three_calc_geos.egsinp");
+    let sinput_path = input_path.to_str().unwrap();
+    let output_dir = tempdir().unwrap();
+    let output_dir = output_dir.path();
+    let soutput_dir = output_dir.to_str().unwrap();
+    assert_cli::Assert::main_binary()
+        .with_args(&["split", sinput_path, "-o", soutput_dir,
+                   "--nthreads", "2",
+                   "--nfiles", "3"])
+        .unwrap();
+    let output_paths = fs::read_dir(output_dir).unwrap()
+        .map(|entry| entry.unwrap().path());
+    let files : Vec<ParSimInput> = output_paths
+        .map(|p|load(&p).unwrap())
+        .collect();
+    assert_eq!(files.len(), 3);
+    assert_eq!(files[0].prototype,files[1].prototype);
+    assert_eq!(files[0].prototype,files[2].prototype);
+    let mut seeds: Vec<Seed> = Vec::new();
+    let mut ncases:Vec<u64>  = Vec::new();
+    for file in files {
+        seeds.extend(&file.seeds);
+        ncases.extend(&file.ncases);
+    }
+    assert_eq!(seeds.len(),6);
+    assert_eq!(ncases.len(),6);
+    let ncase_expected = 5000;
+    let ncase_sum:u64 = ncases.iter().sum();
+    assert!(ncase_sum <= ncase_expected);
+    assert!(ncase_sum >= ncase_expected-6);
+    assert!(has_unique_elements(seeds));
 }
