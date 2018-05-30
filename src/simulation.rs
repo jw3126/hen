@@ -12,9 +12,9 @@ use std;
 use uncertain::UncertainF64;
 use output_parser;
 use std::fmt;
-use util::{Result,debug_string};
+use util::{debug_string, Result};
 use util;
-use util::{has_unique_elements};
+use util::has_unique_elements;
 use std::result::Result as StdResult;
 use itertools::Itertools;
 
@@ -31,10 +31,10 @@ pub struct SingSimInput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimInputBuilder {
-    application:   Option<String>,
+    application: Option<String>,
     content: Option<String>,
-    pegsfile:      Option<String>,
-    filename:Option<String>,
+    pegsfile: Option<String>,
+    filename: Option<String>,
 }
 
 impl SingSimInputBuilder {
@@ -47,22 +47,22 @@ impl SingSimInputBuilder {
         }
     }
 
-    pub fn application(mut self, app:&str) -> Self {
+    pub fn application(mut self, app: &str) -> Self {
         self.application = Some(app.to_string());
         self
     }
 
-    pub fn content(mut self, s:&str) -> Self {
+    pub fn content(mut self, s: &str) -> Self {
         self.content = Some(s.to_string());
         self
     }
 
-    pub fn filename(mut self, s:&str) -> Self {
+    pub fn filename(mut self, s: &str) -> Self {
         self.filename = Some(s.to_string());
         self
     }
 
-    pub fn pegsfile(mut self, s:&str) -> Self {
+    pub fn pegsfile(mut self, s: &str) -> Self {
         self.pegsfile = Some(s.to_string());
         self
     }
@@ -82,17 +82,23 @@ impl SingSimInputBuilder {
             .get_checksum()
             .ok_or("Cannot compute checksum. Are all fields of builder set?")?;
 
-        match self { 
+        match self {
             SingSimInputBuilder {
-                application:Some(application),
-                content:Some(content),
-                pegsfile:Some(pegsfile),
-                filename:Some(filename),
+                application: Some(application),
+                content: Some(content),
+                pegsfile: Some(pegsfile),
+                filename: Some(filename),
             } => {
-                let sim = SingSimInput {application, content,
-                    pegsfile, checksum, filename};
-                Ok(sim)},
-            _ => Err("All fields of builder should be set.".to_string())
+                let sim = SingSimInput {
+                    application,
+                    content,
+                    pegsfile,
+                    checksum,
+                    filename,
+                };
+                Ok(sim)
+            }
+            _ => Err("All fields of builder should be set.".to_string()),
         }
     }
 }
@@ -166,7 +172,8 @@ impl ParSimInput {
                 .content(&content)
                 .pegsfile(pegsfile)
                 .filename(&self.prototype.filename)
-                .build().unwrap()
+                .build()
+                .unwrap()
         };
         let outputs: Vec<SingSimFinished> = streams
             .par_iter()
@@ -197,15 +204,18 @@ impl ParSimInput {
         Ok(())
     }
 
-    fn validate_combine(inps:&[ParSimInput]) -> Result<()> {
+    fn validate_combine(inps: &[ParSimInput]) -> Result<()> {
         if inps.is_empty() {
             return Err("Cannot combine empty collection of simulations.".to_string());
         }
-        let checksums:Vec<String> = inps.iter()
-            .map(|inp|inp.prototype.checksum.clone()).collect();
+        let checksums: Vec<String> = inps.iter()
+            .map(|inp| inp.prototype.checksum.clone())
+            .collect();
         if !checksums.iter().all_equal() {
-            let msg = format!("Cannot combine simulations with different checksums: {:?}", checksums)
-                .to_string();
+            let msg = format!(
+                "Cannot combine simulations with different checksums: {:?}",
+                checksums
+            ).to_string();
             return Err(msg);
         }
         Ok(())
@@ -220,11 +230,14 @@ impl ParSimInput {
             ncases.extend(&inp.ncases);
             seeds.extend(&inp.seeds);
         }
-        let ret = ParSimInput {prototype, seeds, ncases };
+        let ret = ParSimInput {
+            prototype,
+            seeds,
+            ncases,
+        };
         ret.validate()?;
         Ok(ret)
     }
-
 }
 
 fn egs_home_path() -> PathBuf {
@@ -235,21 +248,21 @@ fn egs_home_path() -> PathBuf {
 }
 
 impl SingSimInput {
-
     pub fn from_egsinp_path(application: &str, path: &Path, pegsfile: &str) -> Result<Self> {
         let mut file = File::open(path).map_err(|err| format!("{:?}", err))?;
         let mut content = String::new();
         let filename = path.file_name()
             .ok_or("Error getting file_name")?
-            .to_str().unwrap();
-        file.read_to_string(&mut content)
-            .map_err(debug_string)?;
+            .to_str()
+            .unwrap();
+        file.read_to_string(&mut content).map_err(debug_string)?;
         let sim = SingSimInputBuilder::new()
             .pegsfile(pegsfile)
             .filename(filename)
             .application(application)
             .content(&content)
-            .build().unwrap();
+            .build()
+            .unwrap();
         Ok(sim)
     }
 
@@ -307,23 +320,22 @@ impl SingSimInput {
         }
     }
 
-    pub fn splitn(self, n:usize) -> Result<ParSimInput> {
-        self.split_fancy(None,None,n)
+    pub fn splitn(self, n: usize) -> Result<ParSimInput> {
+        self.split_fancy(None, None, n)
     }
 
-    pub fn split_fancy(self, mncases: Option<Vec<u64>>, mseeds: Option<Vec<Seed>>, 
-                       nthreads:usize) -> Result<ParSimInput> {
-
+    pub fn split_fancy(
+        self,
+        mncases: Option<Vec<u64>>,
+        mseeds: Option<Vec<Seed>>,
+        nthreads: usize,
+    ) -> Result<ParSimInput> {
         let stream = TokenStream::parse_string(&(self.content))?;
-        let seed_count: Option<usize> = mseeds .as_ref().map(|v|v.len());
-        let case_count: Option<usize> = mncases.as_ref().map(|v|v.len());
-        let n = seed_count
-            .or(case_count)
-            .unwrap_or(nthreads);
-        let seeds = mseeds.
-            unwrap_or(stream.generate_seeds(n)?);
-        let ncases = mncases.
-            unwrap_or(stream.generate_ncases(n)?);
+        let seed_count: Option<usize> = mseeds.as_ref().map(|v| v.len());
+        let case_count: Option<usize> = mncases.as_ref().map(|v| v.len());
+        let n = seed_count.or(case_count).unwrap_or(nthreads);
+        let seeds = mseeds.unwrap_or(stream.generate_seeds(n)?);
+        let ncases = mncases.unwrap_or(stream.generate_ncases(n)?);
 
         Ok(self.split(ncases, seeds))
     }
@@ -394,19 +406,24 @@ impl SingSimFinished {
         let simulation_finished = Omitable::from_result(out.simulation_finished);
         let stderr = match simulation_finished {
             Omitable::Available(true) => Omitable::Omitted,
-            _ => Omitable::Available(self.stderr.clone())
+            _ => Omitable::Available(self.stderr.clone()),
         };
         let stdout = match simulation_finished {
             Omitable::Available(true) => Omitable::Omitted,
-            _ => Omitable::Available(self.stdout.clone())
+            _ => Omitable::Available(self.stdout.clone()),
         };
         let input = match simulation_finished {
             Omitable::Available(true) => Omitable::Omitted,
-            _ => Omitable::Available(self.input.clone())
+            _ => Omitable::Available(self.input.clone()),
         };
-        SingSimReport {input,
-            stderr, stdout, exit_status,
-            dose, total_cpu_time, simulation_finished,
+        SingSimReport {
+            input,
+            stderr,
+            stdout,
+            exit_status,
+            dose,
+            total_cpu_time,
+            simulation_finished,
         }
     }
 
@@ -419,10 +436,15 @@ impl SingSimFinished {
         let simulation_finished = Omitable::from_result(out.simulation_finished);
         let stdout = Omitable::Available(self.stdout.clone());
         let stderr = Omitable::Available(self.stderr.clone());
-        let input  = Omitable::Available(self.input .clone());
-        SingSimReport {input,
-            stderr, stdout, exit_status,
-            dose, total_cpu_time, simulation_finished,
+        let input = Omitable::Available(self.input.clone());
+        SingSimReport {
+            input,
+            stderr,
+            stdout,
+            exit_status,
+            dose,
+            total_cpu_time,
+            simulation_finished,
         }
     }
 }
@@ -450,23 +472,27 @@ impl ParSimFinished {
         let ret = ParSimReport {
             input,
             single_runs,
-            total_cpu_time,simulation_finished,dose,
+            total_cpu_time,
+            simulation_finished,
+            dose,
         };
         let ret = ret.recalculate();
         ret
     }
 }
 
-fn compute_total_cpu_time(single_runs:&[SingSimReport]) -> Omitable<f64> {
-    single_runs.iter()
-    .map(|o| o.total_cpu_time.clone())
-    .fold(Omitable::Available(0.), |t1, t2| {
-        Omitable::map2(|x, y| x + y, t1, t2)
-    })
+fn compute_total_cpu_time(single_runs: &[SingSimReport]) -> Omitable<f64> {
+    single_runs
+        .iter()
+        .map(|o| o.total_cpu_time.clone())
+        .fold(Omitable::Available(0.), |t1, t2| {
+            Omitable::map2(|x, y| x + y, t1, t2)
+        })
 }
 
-fn compute_simulation_finished(single_runs:&[SingSimReport]) -> Omitable<bool> {
-    single_runs.iter()
+fn compute_simulation_finished(single_runs: &[SingSimReport]) -> Omitable<bool> {
+    single_runs
+        .iter()
         .map(|o| o.simulation_finished.clone())
         .fold(Omitable::Available(true), |t1, t2| {
             Omitable::map2(|x, y| x & y, t1, t2)
@@ -521,31 +547,47 @@ fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uncerta
 
 impl ParSimReport {
     pub fn recalculate(self) -> Self {
-        let ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished}
-        = self;
+        let ParSimReport {
+            input,
+            single_runs,
+            dose,
+            total_cpu_time,
+            simulation_finished,
+        } = self;
         let _ = dose;
         let _ = total_cpu_time;
         let _ = simulation_finished;
         let dose = compute_dose(&single_runs);
         let total_cpu_time = compute_total_cpu_time(&single_runs);
         let simulation_finished = compute_simulation_finished(&single_runs);
-        ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished}
+        ParSimReport {
+            input,
+            single_runs,
+            dose,
+            total_cpu_time,
+            simulation_finished,
+        }
     }
 
-    pub fn combine(sims:&[ParSimReport]) -> Result<ParSimReport> {
-
+    pub fn combine(sims: &[ParSimReport]) -> Result<ParSimReport> {
         let mut inputs = Vec::new();
         let mut single_runs = Vec::new();
         for sim in sims {
             inputs.push(sim.input.clone());
             single_runs.extend(sim.single_runs.clone());
-        };
+        }
         let input = ParSimInput::combine(&inputs)?;
 
         let dose = Omitable::Omitted;
         let total_cpu_time = Omitable::Omitted;
         let simulation_finished = Omitable::Omitted;
-        let ret = ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished};
+        let ret = ParSimReport {
+            input,
+            single_runs,
+            dose,
+            total_cpu_time,
+            simulation_finished,
+        };
         let ret = ret.recalculate();
         Ok(ret)
     }
@@ -589,12 +631,12 @@ impl ParSimReport {
     }
 
     pub fn compute_efficiency(&self) -> Omitable<f64> {
-        fn inner(doses:Vec<(String,UncertainF64)>,t:f64)->f64 {
+        fn inner(doses: Vec<(String, UncertainF64)>, t: f64) -> f64 {
             let mut ret = 0.;
             let n = doses.len();
             for (ref _label, ref score) in doses {
-                let rvar:f64 = score.rvar();
-                ret += 1.0 /  rvar / t;
+                let rvar: f64 = score.rvar();
+                ret += 1.0 / rvar / t;
             }
             ret / n as f64
         };
@@ -659,19 +701,21 @@ impl fmt::Display for ParSimReport {
     }
 }
 
-impl <T> fmt::Display for Omitable<T> where 
-    T : fmt::Display {
-    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
+impl<T> fmt::Display for Omitable<T>
+where
+    T: fmt::Display,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &Omitable::Omitted      => writeln!(f,""),
-            &Omitable::Fail(ref msg)    => writeln!(f, "{}", msg),
+            &Omitable::Omitted => writeln!(f, ""),
+            &Omitable::Fail(ref msg) => writeln!(f, "{}", msg),
             &Omitable::Available(ref x) => writeln!(f, "{}", x),
         }
     }
 }
 
 impl fmt::Display for SingSimReport {
-    fn fmt(&self, f:&mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.input)?;
         writeln!(f, "{}", self.stdout)?;
         writeln!(f, "{}", self.stderr)

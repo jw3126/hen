@@ -2,7 +2,7 @@ use clap::{Arg, ArgMatches, SubCommand};
 use clap;
 use std::path::{Path, PathBuf};
 use num_cpus;
-use simulation::{ParSimReport, SingSimInput, Seed, ParSimInput};
+use simulation::{ParSimInput, ParSimReport, Seed, SingSimInput};
 use util::{debug_string, load, save, Result};
 use std::fs;
 use std::process;
@@ -225,10 +225,10 @@ struct SplitConfig {
 impl SplitConfig {
     fn validate(&self) -> Result<()> {
         if self.nthreads == 0 {
-            return Err("NTHREADS > 0 must hold.".to_string())
+            return Err("NTHREADS > 0 must hold.".to_string());
         }
         if self.nfiles == 0 {
-            return Err("NFILES > 0 must hold.".to_string())
+            return Err("NFILES > 0 must hold.".to_string());
         }
         Ok(())
     }
@@ -242,29 +242,44 @@ impl SubCmd for SplitConfig {
         let nthreads = m.get_parse("NTHREADS")?;
         let application = m.get_string("APPLICATION")?;
         let pegsfile = m.get_string("PEGSFILE")?;
-        let ret = SplitConfig { inputpath, outputpath, nthreads, nfiles, application, pegsfile};
+        let ret = SplitConfig {
+            inputpath,
+            outputpath,
+            nthreads,
+            nfiles,
+            application,
+            pegsfile,
+        };
         ret.validate()?;
         Ok(ret)
     }
 
     fn run(&self) -> Result<()> {
-        let prototype = SingSimInput::from_egsinp_path(&self.application,
-                                                       &self.inputpath, &self.pegsfile)?;
+        let prototype =
+            SingSimInput::from_egsinp_path(&self.application, &self.inputpath, &self.pegsfile)?;
         let n = self.nthreads * self.nfiles;
-        let ParSimInput {prototype, seeds, ncases} = prototype.splitn(n)?;
+        let ParSimInput {
+            prototype,
+            seeds,
+            ncases,
+        } = prototype.splitn(n)?;
         let chunksize = self.nthreads;
         let seeds = seeds.chunks(chunksize);
         let ncases = ncases.chunks(chunksize);
-        let filestem = &self.inputpath.file_stem()
+        let filestem = &self.inputpath
+            .file_stem()
             .ok_or("Cannot get file_stem".to_string())?
-            .to_str().ok_or("to_str failed")?
+            .to_str()
+            .ok_or("to_str failed")?
             .to_string();
         for (i, (ncase, seed)) in ncases.zip(seeds).enumerate() {
-            let filename = format!("{}_{}.heninp",filestem,i).to_string();
+            let filename = format!("{}_{}.heninp", filestem, i).to_string();
             let path = self.outputpath.join(filename);
-            let psim = ParSimInput {prototype:prototype.clone(),
-                ncases:ncase.to_vec(),
-                seeds:seed.to_vec()};
+            let psim = ParSimInput {
+                prototype: prototype.clone(),
+                ncases: ncase.to_vec(),
+                seeds: seed.to_vec(),
+            };
             save(&path, &psim)?;
         }
         Ok(())
@@ -361,8 +376,7 @@ impl ViewConfig {
         let filestem = report.input.prototype.checksum;
         let filename = format!("{}.egsinp", filestem);
         let mut file = fs::File::create(&filename).map_err(debug_string)?;
-        file.write_all(content.as_bytes())
-            .map_err(debug_string)?;
+        file.write_all(content.as_bytes()).map_err(debug_string)?;
         let out = self.run_egsinp(&filename);
         fs::remove_file(filename).map_err(debug_string)?;
         out?;
@@ -433,7 +447,7 @@ struct RunConfig {
 impl RunConfig {
     pub fn validate(&self) -> Result<()> {
         if self.nthreads == 0 {
-            return Err("NTHREADS > 0 must hold.".to_string())
+            return Err("NTHREADS > 0 must hold.".to_string());
         }
         if let Some(ref seeds) = self.seeds {
             if let Some(ref ncases) = self.ncases {
@@ -449,22 +463,21 @@ impl RunConfig {
         SingSimInput::from_egsinp_path(&self.application, input_path, &self.pegsfile)
     }
 
-    fn run_par_input(&self, p:&ParSimInput, output_path:&Path) -> Result<()> {
+    fn run_par_input(&self, p: &ParSimInput, output_path: &Path) -> Result<()> {
         match output_path.parent() {
             None => {}
             Some(d) => fs::create_dir_all(d).map_err(debug_string)?,
         };
-        let out = p.run()?
-            .report();
+        let out = p.run()?.report();
         println!("{}", out);
         save(output_path, &out)
     }
 
-    fn is_input_ext(s:&str) -> bool {
-        (s == "egsinp")|(s == "heninp")
+    fn is_input_ext(s: &str) -> bool {
+        (s == "egsinp") | (s == "heninp")
     }
 
-    fn has_input_ext(path:&Path) -> bool {
+    fn has_input_ext(path: &Path) -> bool {
         let ext = path.extension()
             .unwrap_or(OsStr::new("fail"))
             .to_str()
@@ -476,7 +489,7 @@ impl RunConfig {
         let ret = if self.dir {
             read_paths_in_dir(&self.inputpath)?
                 .iter()
-                .filter(|p|Self::has_input_ext(p))
+                .filter(|p| Self::has_input_ext(p))
                 .map(|inp| {
                     let filestem = inp.file_stem().unwrap();
                     let mut outp = self.outputpath.clone();
@@ -494,16 +507,17 @@ impl RunConfig {
     fn run(&self) -> Result<()> {
         let paths = self.create_input_output_paths()?;
         for (inp, outp) in paths {
-            let ext = inp.extension().unwrap_or(OsStr::new("fail")).
-                to_str().unwrap_or("fail");
+            let ext = inp.extension()
+                .unwrap_or(OsStr::new("fail"))
+                .to_str()
+                .unwrap_or("fail");
             let sim = match ext {
-                "heninp" => {
-                    load(&inp)?
-                }
-                _ => {
-                    self.create_sing_sim_input(&inp)?
-                        .split_fancy(self.ncases.clone(), self.seeds.clone(), self.nthreads)?
-                },
+                "heninp" => load(&inp)?,
+                _ => self.create_sing_sim_input(&inp)?.split_fancy(
+                    self.ncases.clone(),
+                    self.seeds.clone(),
+                    self.nthreads,
+                )?,
             };
             self.run_par_input(&sim, &outp)?;
         }
@@ -518,21 +532,20 @@ impl SubCmd for RunConfig {
         let outputpath = m.get_abspath("OUTPUT")?;
         let application = m.get_string("APPLICATION")?;
         let pegsfile = m.get_string("PEGSFILE")?;
-        let nthreads = m.get_parse("NTHREADS")
-            .unwrap_or(num_cpus::get());
+        let nthreads = m.get_parse("NTHREADS").unwrap_or(num_cpus::get());
         let seeds = match m.get("SEEDS") {
             Err(_) => None,
             Ok(s) => {
-                let v:Vec<Seed> = serde_json::from_str(s)
-                    .map_err(|_|"Cannot parse SEEDS".to_string())?;
+                let v: Vec<Seed> =
+                    serde_json::from_str(s).map_err(|_| "Cannot parse SEEDS".to_string())?;
                 Some(v)
             }
         };
         let ncases = match m.get("NCASES") {
             Err(_) => None,
             Ok(s) => {
-                let v:Vec<u64> = serde_json::from_str(s)
-                    .map_err(|_|"Cannot parse NCASES".to_string())?;
+                let v: Vec<u64> =
+                    serde_json::from_str(s).map_err(|_| "Cannot parse NCASES".to_string())?;
                 Some(v)
             }
         };
