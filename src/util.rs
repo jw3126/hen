@@ -52,6 +52,14 @@ where
     iter.into_iter().all(move |x| uniq.insert(x))
 }
 
+pub fn read_paths_in_dir(dir:&Path) -> Result<Vec<PathBuf>> {
+    let ret = fs::read_dir(dir)
+        .map_err(debug_string)?
+        .map(|entry| entry.unwrap().path())
+        .collect();
+    Ok(ret)
+}
+
 #[test]
 fn test_has_unique_elements() {
     assert!(!has_unique_elements(vec![10, 20, 30, 10, 50]));

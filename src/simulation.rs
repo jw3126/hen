@@ -14,6 +14,7 @@ use output_parser;
 use std::fmt;
 use util::{Result,debug_string};
 use util;
+use util::{has_unique_elements};
 use std::result::Result as StdResult;
 
 pub type Seed = (usize, usize); // is this correct integer type?
@@ -195,22 +196,31 @@ impl ParSimInput {
         Ok(())
     }
 
-    pub fn merge(&self, other:&ParSimInput) -> Result<ParSimInput> {
-        if self.prototype != other.prototype {
-            let msg = "Cannot merge simulations with different prototypes";
-            return Err(msg.to_string());
+    fn validate_combine(inps:&[ParSimInput]) -> Result<()> {
+        if inps.is_empty() {
+            return Err("Cannot combine empty collection of simulations.".to_string());
         }
-        let prototype = self.prototype.clone();
+        let checksums = inps.iter().map(|inp|inp.prototype.checksum.clone());
+        if !has_unique_elements(checksums) {
+            return Err("Cannot combine simulations with different checksums.".to_string());
+        }
+        Ok(())
+    }
+
+    pub fn combine(inps: &[ParSimInput]) -> Result<ParSimInput> {
+        ParSimInput::validate_combine(inps)?;
+        let prototype = inps[0].prototype.clone();
         let mut seeds = Vec::new();
-        seeds.extend(&self.seeds);
-        seeds.extend(&other.seeds);
         let mut ncases = Vec::new();
-        ncases.extend(&self.ncases);
-        ncases.extend(&other.ncases);
+        for inp in inps {
+            ncases.extend(&inp.ncases);
+            seeds.extend(&inp.seeds);
+        }
         let ret = ParSimInput {prototype, seeds, ncases };
         ret.validate()?;
         Ok(ret)
     }
+
 }
 
 fn egs_home_path() -> PathBuf {
@@ -509,10 +519,31 @@ impl ParSimReport {
     pub fn recalculate(self) -> Self {
         let ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished}
         = self;
+        let _ = dose;
+        let _ = total_cpu_time;
+        let _ = simulation_finished;
         let dose = compute_dose(&single_runs);
         let total_cpu_time = compute_total_cpu_time(&single_runs);
         let simulation_finished = compute_simulation_finished(&single_runs);
         ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished}
+    }
+
+    pub fn combine(sims:&[ParSimReport]) -> Result<ParSimReport> {
+
+        let mut inputs = Vec::new();
+        let mut single_runs = Vec::new();
+        for sim in sims {
+            inputs.push(sim.input.clone());
+            single_runs.extend(sim.single_runs.clone());
+        };
+        let input = ParSimInput::combine(&inputs)?;
+
+        let dose = Omitable::Omitted;
+        let total_cpu_time = Omitable::Omitted;
+        let simulation_finished = Omitable::Omitted;
+        let ret = ParSimReport {input, single_runs, dose, total_cpu_time, simulation_finished};
+        let ret = ret.recalculate();
+        Ok(ret)
     }
 
     pub fn to_string_smart(&self) -> String {

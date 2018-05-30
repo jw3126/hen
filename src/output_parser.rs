@@ -2,7 +2,7 @@ use std::io::BufRead;
 use regex::Regex;
 use uncertain::UncertainF64;
 use simulation::SingSimParsedOutput;
-use util::{debug_string, Result};
+use util::{Result};
 
 fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
     let re = Regex::new(r"^(.*[^\.])\.\.\.*(.*)$").unwrap();

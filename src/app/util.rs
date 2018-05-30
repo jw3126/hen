@@ -4,6 +4,17 @@ use std::env::current_dir;
 use std;
 use util::Result;
 
+pub trait SubCmd
+where
+    Self: std::marker::Sized,
+{
+    fn parse(m: &ArgMatches) -> Result<Self>;
+    fn run(&self) -> Result<()>;
+    fn main(m: &ArgMatches) -> Result<()> {
+        Self::parse(m)?.run()
+    }
+}
+
 pub trait GetMatch {
 
     fn get(&self, key:&str) -> Result<&str>;
@@ -51,3 +62,4 @@ pub fn abspath_from_string(s: &str) -> Result<PathBuf> {
     }
     Ok(path)
 }
+

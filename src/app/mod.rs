@@ -3,19 +3,19 @@ use clap;
 use std::path::{Path, PathBuf};
 use num_cpus;
 use simulation::{ParSimReport, SingSimInput, Seed, ParSimInput};
-use std::env::current_dir;
 use util::{debug_string, load, save, Result};
 use std::fs;
 use std::process;
 use std::io::Write;
 use tokenizer::TokenStream;
 use std::io::BufReader;
-use std;
 use std::ffi::OsStr;
 use serde_json;
+use util::read_paths_in_dir;
 
-mod argmatch_util;
-use app::argmatch_util::GetMatch;
+mod util;
+mod combine;
+use app::util::{GetMatch, SubCmd};
 
 fn create_app() -> clap::App<'static, 'static> {
     clap::App::new("hen")
@@ -76,7 +76,7 @@ fn create_app() -> clap::App<'static, 'static> {
                         .short("n")
                         .help("List of ncases that should be used. e.g [10000,10000,20000].")
                         .takes_value(true),
-                ),
+                )
         )
         .subcommand(
             SubCommand::with_name("show")
@@ -94,7 +94,7 @@ fn create_app() -> clap::App<'static, 'static> {
                         .index(2)
                         .default_value("smart")
                         .case_insensitive(true)
-                ),
+                )
         )
         .subcommand(
             SubCommand::with_name("view")
@@ -105,7 +105,7 @@ fn create_app() -> clap::App<'static, 'static> {
                     Arg::with_name("PATH")
                         .help("Path to a .json file containing simulation report.")
                         .index(1),
-                ),
+                )
         )
         .subcommand(
             SubCommand::with_name("rerun")
@@ -124,7 +124,7 @@ fn create_app() -> clap::App<'static, 'static> {
                         .takes_value(true)
                         .help("Name of output file.")
                         .required(true), // guess it?
-                ),
+                )
         )
         .subcommand(
             SubCommand::with_name("fmt")
@@ -135,7 +135,7 @@ fn create_app() -> clap::App<'static, 'static> {
                     Arg::with_name("PATH")
                         .help("Path to a .egsinp file that should be formatted.")
                         .index(1),
-                ),
+                )
         )
         .subcommand(
             SubCommand::with_name("split")
@@ -186,19 +186,28 @@ fn create_app() -> clap::App<'static, 'static> {
                         .help("Name of the application.")
                         .default_value("egs_chamber")
                         .takes_value(true),
-                ),
+                )
         )
-}
-
-trait SubCmd
-where
-    Self: std::marker::Sized,
-{
-    fn parse(m: &ArgMatches) -> Result<Self>;
-    fn run(&self) -> Result<()>;
-    fn main(m: &ArgMatches) -> Result<()> {
-        Self::parse(m)?.run()
-    }
+        .subcommand(
+            SubCommand::with_name("combine")
+                .version(crate_version!())
+                .author(crate_authors!())
+                .about("Combine multiple .henout files into one.")
+                .arg(
+                    Arg::with_name("INPUT")
+                        .help("Path to a directory containing files that should be combined.")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("OUTPUT")
+                        .short("o")
+                        .long("output")
+                        .takes_value(true)
+                        .help("Path to directory, where output should be saved.")
+                        .required(true),
+                )
+        )
 }
 
 #[derive(Debug)]
@@ -466,15 +475,14 @@ impl RunConfig {
 
     fn create_input_output_paths(&self) -> Result<Vec<(PathBuf, PathBuf)>> {
         let ret = if self.dir {
-            fs::read_dir(self.inputpath.clone())
-                .map_err(debug_string)?
-                .map(|entry| entry.unwrap().path())
+            read_paths_in_dir(&self.inputpath)?
+                .iter()
                 .filter(|p|Self::has_input_ext(p))
                 .map(|inp| {
                     let filestem = inp.file_stem().unwrap();
                     let mut outp = self.outputpath.clone();
                     outp.push(filestem);
-                    outp.set_extension("json");
+                    outp.set_extension("henout");
                     (inp.clone(), outp)
                 })
                 .collect()

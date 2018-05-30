@@ -105,8 +105,8 @@ fn test_run_many() {
     let input_path_many = asset_path().join("input_many");
     let sinput_path_many = input_path_many.to_str().unwrap();
     let output_dir_many = tempdir().unwrap();
-    let output_path_many1 = output_dir_many.path().join("file1.json");
-    let output_path_many2 = output_dir_many.path().join("file2.json");
+    let output_path_many1 = output_dir_many.path().join("file1.henout");
+    let output_path_many2 = output_dir_many.path().join("file2.henout");
     let soutput_path_many = output_dir_many.path().to_str().unwrap();
 
     assert_cli::Assert::main_binary()
