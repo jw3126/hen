@@ -16,6 +16,7 @@ use util::{Result,debug_string};
 use util;
 use util::{has_unique_elements};
 use std::result::Result as StdResult;
+use itertools::Itertools;
 
 pub type Seed = (usize, usize); // is this correct integer type?
 
@@ -200,9 +201,12 @@ impl ParSimInput {
         if inps.is_empty() {
             return Err("Cannot combine empty collection of simulations.".to_string());
         }
-        let checksums = inps.iter().map(|inp|inp.prototype.checksum.clone());
-        if !has_unique_elements(checksums) {
-            return Err("Cannot combine simulations with different checksums.".to_string());
+        let checksums:Vec<String> = inps.iter()
+            .map(|inp|inp.prototype.checksum.clone()).collect();
+        if !checksums.iter().all_equal() {
+            let msg = format!("Cannot combine simulations with different checksums: {:?}", checksums)
+                .to_string();
+            return Err(msg);
         }
         Ok(())
     }

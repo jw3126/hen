@@ -6,6 +6,7 @@ use rand;
 use rand::Rng;
 use std::fs;
 use tempfile::{tempdir};
+use uncertain::UncertainF64;
 
 fn randstring() -> String {
     let ret: String = rand::thread_rng().gen_ascii_chars().take(10).collect();
@@ -25,6 +26,20 @@ fn run_and_load(input_path:&Path, extra_args:&[&str]) -> ParSimReport {
         .unwrap();
     let r: ParSimReport = load(&output_path).unwrap();
     r
+}
+
+fn assert_close_doses(dose1:Vec<(String,UncertainF64)>,
+                    dose2:Vec<(String,UncertainF64)>) {
+    if dose1.len() != dose2.len() {
+        panic!("Vectors of different length");
+    }
+    for (&(ref s1,x1),&(ref s2,x2)) in dose1.iter().zip(dose2.iter()) {
+        if s1 != s2 {
+            panic!("Names of dose regions must match");
+        }
+        assert_relative_eq!(x1.value(), x2.value());
+        assert_relative_eq!(x1.std(), x2.std());
+    }
 }
 
 #[test]
@@ -179,4 +194,44 @@ fn test_split() {
     assert!(ncase_sum <= ncase_expected);
     assert!(ncase_sum >= ncase_expected-6);
     assert!(has_unique_elements(seeds));
+}
+
+#[test]
+fn test_split_run_combine() {
+    let input_path  = asset_path().join("three_calc_geos.egsinp");
+    let sinput_path = input_path.to_str().unwrap();
+    let split_dir   = tempdir().unwrap();
+    let split_dir   = split_dir.path();
+    let ssplit_dir  = split_dir.to_str().unwrap();
+    let output_dir  = tempdir().unwrap();
+    let output_dir  = output_dir.path();
+    let soutput_dir = output_dir.to_str().unwrap();
+    let run_dir  = tempdir().unwrap();
+    let run_dir  = run_dir.path();
+    let srun_dir = run_dir.to_str().unwrap();
+    assert_cli::Assert::main_binary()
+        .with_args(&["split", sinput_path, "-o", ssplit_dir,
+                   "--nthreads", "2",
+                   "--nfiles", "3"])
+        .unwrap();
+    assert_cli::Assert::main_binary()
+        .with_args(&["run", ssplit_dir, "-o", srun_dir])
+        .unwrap();
+    assert_cli::Assert::main_binary()
+        .with_args(&["combine", srun_dir, "-o", soutput_dir])
+        .unwrap();
+
+    let output_paths = fs::read_dir(output_dir).unwrap()
+        .map(|entry| entry.unwrap().path());
+    let files : Vec<ParSimReport> = output_paths
+        .map(|p|load(&p).unwrap())
+        .collect();
+    assert_eq!(files.len(), 1);
+    let rep_combined = files[0].clone();
+    let rep_single = run_and_load(&input_path,&["-t6"]);
+    assert!(rep_combined != rep_single);
+    assert_close_doses(rep_combined.dose.
+                       into_result().unwrap(), 
+                       rep_single.dose.
+                       into_result().unwrap());
 }

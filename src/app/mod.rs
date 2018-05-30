@@ -16,6 +16,7 @@ use util::read_paths_in_dir;
 mod util;
 mod combine;
 use app::util::{GetMatch, SubCmd};
+use app::combine::CombineConfig;
 
 fn create_app() -> clap::App<'static, 'static> {
     clap::App::new("hen")
@@ -61,6 +62,7 @@ fn create_app() -> clap::App<'static, 'static> {
                 .arg(
                     Arg::with_name("NTHREADS")
                         .long("nthreads")
+                        .short("t")
                         .help("Number of threads that should be used for the simulation. Defaults to the number of cores.")
                         .takes_value(true),
                 )
@@ -248,7 +250,6 @@ impl SubCmd for SplitConfig {
     fn run(&self) -> Result<()> {
         let prototype = SingSimInput::from_egsinp_path(&self.application,
                                                        &self.inputpath, &self.pegsfile)?;
-        println!("{:?}", self);
         let n = self.nthreads * self.nfiles;
         let ParSimInput {prototype, seeds, ncases} = prototype.splitn(n)?;
         let chunksize = self.nthreads;
@@ -264,8 +265,6 @@ impl SubCmd for SplitConfig {
             let psim = ParSimInput {prototype:prototype.clone(),
                 ncases:ncase.to_vec(),
                 seeds:seed.to_vec()};
-            println!("{:?}", i);
-            println!("{:?}", path);
             save(&path, &psim)?;
         }
         Ok(())
@@ -499,7 +498,7 @@ impl RunConfig {
                 to_str().unwrap_or("fail");
             let sim = match ext {
                 "heninp" => {
-                    load(&outp)?
+                    load(&inp)?
                 }
                 _ => {
                     self.create_sing_sim_input(&inp)?
@@ -566,6 +565,7 @@ pub fn app_main() -> Result<()> {
         ("rerun", Some(m)) => RerunConfig::main(m),
         ("fmt", Some(m)) => FormatConfig::main(m),
         ("split", Some(m)) => SplitConfig::main(m),
+        ("combine", Some(m)) => CombineConfig::main(m),
         ("", _) => Err("Try hen --help".to_string()),
         x => Err(format!("Unknown subcommand {:?}. Try hen --help", x).to_string()),
     }

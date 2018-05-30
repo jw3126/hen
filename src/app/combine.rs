@@ -10,18 +10,17 @@ use app::util::GetMatch;
 use util::{load,save};
 
 #[derive(Debug)]
-struct CombineConfig {
+pub struct CombineConfig {
     inputpath: PathBuf,
     outputpath:PathBuf,
 }
 
 impl CombineConfig {
-    fn compute_output_path(&self, input_path:&Path) -> Result<PathBuf> {
-            let stem = input_path.file_stem()
-                .ok_or(format!("Cannot get stem of {:?}", &input_path))?;
-            let mut opath = self.outputpath.join(stem);
-            opath.set_extension("henout");
-            Ok(opath)
+    fn compute_output_path(&self, rep:&ParSimReport) -> Result<PathBuf> {
+        let filename = &rep.input.prototype.filename;
+        let mut opath = self.outputpath.join(filename);
+        opath.set_extension("henout");
+        Ok(opath)
     }
 
     fn compute_input_paths(&self) -> Result<Vec<PathBuf>> {
@@ -40,8 +39,8 @@ impl CombineConfig {
         let paths = self.compute_input_paths()?;
         let mut ret = HashMap::new();
         for ipath in paths {
-            let opath = self.compute_output_path(&ipath)?;
             let rep = load(&ipath)?;
+            let opath = self.compute_output_path(&rep)?;
             ret.entry(opath).or_insert(Vec::new()).push(rep);
         }
         Ok(ret)
