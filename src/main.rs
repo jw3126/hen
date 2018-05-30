@@ -1,9 +1,9 @@
+extern crate itertools;
 extern crate num_cpus;
 extern crate rand;
 extern crate rayon;
 extern crate regex;
 extern crate sha3;
-extern crate itertools;
 
 #[cfg(test)]
 extern crate assert_cli;
@@ -49,6 +49,6 @@ pub fn error(msg: &str) {
 fn main() {
     match app_main() {
         Ok(_) => {}
-        Err(err) => error(&err)
+        Err(err) => error(&err),
     }
 }

@@ -1,11 +1,11 @@
-use util::{asset_path, load, has_unique_elements};
+use util::{asset_path, has_unique_elements, load};
 use std::path::Path;
-use simulation::{ParSimReport,ParSimInput,Seed};
+use simulation::{ParSimInput, ParSimReport, Seed};
 use assert_cli;
 use rand;
 use rand::Rng;
 use std::fs;
-use tempfile::{tempdir};
+use tempfile::tempdir;
 use uncertain::UncertainF64;
 
 fn randstring() -> String {
@@ -13,7 +13,7 @@ fn randstring() -> String {
     ret
 }
 
-fn run_and_load(input_path:&Path, extra_args:&[&str]) -> ParSimReport {
+fn run_and_load(input_path: &Path, extra_args: &[&str]) -> ParSimReport {
     let sinput_path = input_path.to_str().unwrap();
     let output_dir = tempdir().unwrap();
     let output_path = output_dir.path().join("out.json");
@@ -21,19 +21,16 @@ fn run_and_load(input_path:&Path, extra_args:&[&str]) -> ParSimReport {
     let mut args = vec!["run", sinput_path];
     args.extend(extra_args.iter());
     args.extend(["-o", soutput_path].iter());
-    assert_cli::Assert::main_binary()
-        .with_args(&args)
-        .unwrap();
+    assert_cli::Assert::main_binary().with_args(&args).unwrap();
     let r: ParSimReport = load(&output_path).unwrap();
     r
 }
 
-fn assert_close_doses(dose1:Vec<(String,UncertainF64)>,
-                    dose2:Vec<(String,UncertainF64)>) {
+fn assert_close_doses(dose1: Vec<(String, UncertainF64)>, dose2: Vec<(String, UncertainF64)>) {
     if dose1.len() != dose2.len() {
         panic!("Vectors of different length");
     }
-    for (&(ref s1,x1),&(ref s2,x2)) in dose1.iter().zip(dose2.iter()) {
+    for (&(ref s1, x1), &(ref s2, x2)) in dose1.iter().zip(dose2.iter()) {
         if s1 != s2 {
             panic!("Names of dose regions must match");
         }
@@ -56,7 +53,8 @@ fn test_run_multiple_geometries() {
     let soutput_path = output_path.to_str().unwrap();
     assert_cli::Assert::main_binary()
         .with_args(&["run", sinput_path, "-o", soutput_path])
-        .stdout().contains("finishSimulation(egs_chamber) 0")
+        .stdout()
+        .contains("finishSimulation(egs_chamber) 0")
         .unwrap();
 
     let r: ParSimReport = load(&output_path).unwrap();
@@ -78,19 +76,23 @@ fn test_run_custom_seeds_ncases() {
     let output_path = tempdir().unwrap().path().join("output").join(randstring());
     let soutput_path = output_path.to_str().unwrap();
     assert_cli::Assert::main_binary()
-        .with_args(&["run", sinput_path,
-                   "-o", soutput_path,
-                   "--seeds=[[1983,324],[3,4]]",
-                   "--ncases=[173, 200]"])
-        .stdout().contains("finishSimulation(egs_chamber) 0")
+        .with_args(&[
+            "run",
+            sinput_path,
+            "-o",
+            soutput_path,
+            "--seeds=[[1983,324],[3,4]]",
+            "--ncases=[173, 200]",
+        ])
+        .stdout()
+        .contains("finishSimulation(egs_chamber) 0")
         .unwrap();
 
     let r: ParSimReport = load(&output_path).unwrap();
-    assert_eq!(r.input.seeds,vec![(1983,324),(3,4)]);
-    assert_eq!(r.input.ncases,vec![173, 200]);
+    assert_eq!(r.input.seeds, vec![(1983, 324), (3, 4)]);
+    assert_eq!(r.input.ncases, vec![173, 200]);
     let outs = r.single_runs;
-    let s:String = outs[0].clone().input.into_result().unwrap()
-        .content;
+    let s: String = outs[0].clone().input.into_result().unwrap().content;
     assert!(s.contains("173"));
     assert!(s.contains("1983 324"));
 }
@@ -103,7 +105,8 @@ fn test_run_bad_pegs() {
     let soutput_path = output_path.to_str().unwrap();
     assert_cli::Assert::main_binary()
         .with_args(&["run", sinput_path, "-o", soutput_path, "-p", "tutor_data"])
-        .stdout().contains("PROGRAM STOPPED IN HATCH BECAUSE THE")
+        .stdout()
+        .contains("PROGRAM STOPPED IN HATCH BECAUSE THE")
         .unwrap();
 
     let _r: ParSimReport = load(&output_path).unwrap();
@@ -169,50 +172,63 @@ fn test_split() {
     let output_dir = output_dir.path();
     let soutput_dir = output_dir.to_str().unwrap();
     assert_cli::Assert::main_binary()
-        .with_args(&["split", sinput_path, "-o", soutput_dir,
-                   "--nthreads", "2",
-                   "--nfiles", "3"])
+        .with_args(&[
+            "split",
+            sinput_path,
+            "-o",
+            soutput_dir,
+            "--nthreads",
+            "2",
+            "--nfiles",
+            "3",
+        ])
         .unwrap();
-    let output_paths = fs::read_dir(output_dir).unwrap()
+    let output_paths = fs::read_dir(output_dir)
+        .unwrap()
         .map(|entry| entry.unwrap().path());
-    let files : Vec<ParSimInput> = output_paths
-        .map(|p|load(&p).unwrap())
-        .collect();
+    let files: Vec<ParSimInput> = output_paths.map(|p| load(&p).unwrap()).collect();
     assert_eq!(files.len(), 3);
-    assert_eq!(files[0].prototype,files[1].prototype);
-    assert_eq!(files[0].prototype,files[2].prototype);
+    assert_eq!(files[0].prototype, files[1].prototype);
+    assert_eq!(files[0].prototype, files[2].prototype);
     let mut seeds: Vec<Seed> = Vec::new();
-    let mut ncases:Vec<u64>  = Vec::new();
+    let mut ncases: Vec<u64> = Vec::new();
     for file in files {
         seeds.extend(&file.seeds);
         ncases.extend(&file.ncases);
     }
-    assert_eq!(seeds.len(),6);
-    assert_eq!(ncases.len(),6);
+    assert_eq!(seeds.len(), 6);
+    assert_eq!(ncases.len(), 6);
     let ncase_expected = 5000;
-    let ncase_sum:u64 = ncases.iter().sum();
+    let ncase_sum: u64 = ncases.iter().sum();
     assert!(ncase_sum <= ncase_expected);
-    assert!(ncase_sum >= ncase_expected-6);
+    assert!(ncase_sum >= ncase_expected - 6);
     assert!(has_unique_elements(seeds));
 }
 
 #[test]
 fn test_split_run_combine() {
-    let input_path  = asset_path().join("three_calc_geos.egsinp");
+    let input_path = asset_path().join("three_calc_geos.egsinp");
     let sinput_path = input_path.to_str().unwrap();
-    let split_dir   = tempdir().unwrap();
-    let split_dir   = split_dir.path();
-    let ssplit_dir  = split_dir.to_str().unwrap();
-    let output_dir  = tempdir().unwrap();
-    let output_dir  = output_dir.path();
+    let split_dir = tempdir().unwrap();
+    let split_dir = split_dir.path();
+    let ssplit_dir = split_dir.to_str().unwrap();
+    let output_dir = tempdir().unwrap();
+    let output_dir = output_dir.path();
     let soutput_dir = output_dir.to_str().unwrap();
-    let run_dir  = tempdir().unwrap();
-    let run_dir  = run_dir.path();
+    let run_dir = tempdir().unwrap();
+    let run_dir = run_dir.path();
     let srun_dir = run_dir.to_str().unwrap();
     assert_cli::Assert::main_binary()
-        .with_args(&["split", sinput_path, "-o", ssplit_dir,
-                   "--nthreads", "2",
-                   "--nfiles", "3"])
+        .with_args(&[
+            "split",
+            sinput_path,
+            "-o",
+            ssplit_dir,
+            "--nthreads",
+            "2",
+            "--nfiles",
+            "3",
+        ])
         .unwrap();
     assert_cli::Assert::main_binary()
         .with_args(&["run", ssplit_dir, "-o", srun_dir])
@@ -221,17 +237,16 @@ fn test_split_run_combine() {
         .with_args(&["combine", srun_dir, "-o", soutput_dir])
         .unwrap();
 
-    let output_paths = fs::read_dir(output_dir).unwrap()
+    let output_paths = fs::read_dir(output_dir)
+        .unwrap()
         .map(|entry| entry.unwrap().path());
-    let files : Vec<ParSimReport> = output_paths
-        .map(|p|load(&p).unwrap())
-        .collect();
+    let files: Vec<ParSimReport> = output_paths.map(|p| load(&p).unwrap()).collect();
     assert_eq!(files.len(), 1);
     let rep_combined = files[0].clone();
-    let rep_single = run_and_load(&input_path,&["-t6"]);
+    let rep_single = run_and_load(&input_path, &["-t6"]);
     assert!(rep_combined != rep_single);
-    assert_close_doses(rep_combined.dose.
-                       into_result().unwrap(), 
-                       rep_single.dose.
-                       into_result().unwrap());
+    assert_close_doses(
+        rep_combined.dose.into_result().unwrap(),
+        rep_single.dose.into_result().unwrap(),
+    );
 }

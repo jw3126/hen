@@ -43,7 +43,7 @@ pub fn asset_path() -> PathBuf {
     return filepath;
 }
 
-pub fn read_paths_in_dir(dir:&Path) -> Result<Vec<PathBuf>> {
+pub fn read_paths_in_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let ret = fs::read_dir(dir)
         .map_err(debug_string)?
         .map(|entry| entry.unwrap().path())
@@ -65,7 +65,7 @@ fn test_has_unique_elements() {
     assert!(!has_unique_elements(vec![10, 20, 30, 10, 50]));
     assert!(has_unique_elements(vec![10, 20, 30, 40, 50]));
     assert!(has_unique_elements(Vec::<u8>::new()));
-    assert!(has_unique_elements(vec![(1,2),(1,3)]));
-    assert!(!has_unique_elements(vec![(1,2),(1,2)]));
+    assert!(has_unique_elements(vec![(1, 2), (1, 3)]));
+    assert!(!has_unique_elements(vec![(1, 2), (1, 2)]));
     assert!(!has_unique_elements(vec!["a".to_string(), "a".to_string()]));
 }
