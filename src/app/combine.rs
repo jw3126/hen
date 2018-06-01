@@ -1,7 +1,5 @@
 use clap::ArgMatches;
-use std::path::{Path, PathBuf};
-use std::env::current_dir;
-use std;
+use std::path::{PathBuf};
 use app::util::SubCmd;
 use util::{read_paths_in_dir, Result};
 use std::collections::HashMap;

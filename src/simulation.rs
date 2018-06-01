@@ -14,7 +14,6 @@ use output_parser;
 use std::fmt;
 use util::{debug_string, Result};
 use util;
-use util::has_unique_elements;
 use std::result::Result as StdResult;
 use itertools::Itertools;
 

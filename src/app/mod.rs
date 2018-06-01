@@ -18,6 +18,47 @@ mod combine;
 use app::util::{GetMatch, SubCmd};
 use app::combine::CombineConfig;
 
+fn arg_input() -> Arg<'static, 'static> {
+    Arg::with_name("INPUT")
+        .index(1)
+        .takes_value(true)
+        .required(true)
+        .help("Name of the input file.")
+}
+
+fn arg_output() -> Arg<'static, 'static> {
+    Arg::with_name("OUTPUT")
+        .short("o")
+        .long("output")
+        .takes_value(true)
+        .help("Path where output should be stored.")
+        .required(true)
+}
+
+fn arg_pegsfile() -> Arg<'static, 'static> {
+    Arg::with_name("PEGSFILE")
+        .short("p")
+        .long("pegsfile")
+        .help("Name of the pegsfile.")
+        .default_value("521icru")
+        .takes_value(true)
+}
+
+fn arg_application() -> Arg<'static, 'static> {
+    Arg::with_name("APPLICATION")
+        .short("a")
+        .long("app")
+        .help("Name of the application.")
+        .default_value("egs_chamber")
+        .takes_value(true)
+}
+
+fn arg_report() -> Arg<'static, 'static> {
+    Arg::with_name("PATH")
+        .help("Path to a .henout file containing simulation report.")
+        .index(1)
+}
+
 fn create_app() -> clap::App<'static, 'static> {
     clap::App::new("hen")
         .author(crate_authors!())
@@ -28,37 +69,10 @@ fn create_app() -> clap::App<'static, 'static> {
                 .about("Run .egsinp files.")
                 .version(crate_version!())
                 .author(crate_authors!())
-                .arg(
-                    Arg::with_name("INPUT")
-                        .index(1)
-                        .takes_value(true)
-                        .required(true)
-                        .help("Name of the input file."),
-                )
-                .arg(
-                    Arg::with_name("OUTPUT")
-                        .short("o")
-                        .long("output")
-                        .takes_value(true)
-                        .help("Name of the output file.")
-                        .required(true), // TODO guess it
-                )
-                .arg(
-                    Arg::with_name("PEGSFILE")
-                        .short("p")
-                        .long("pegsfile")
-                        .help("Name of the pegsfile.")
-                        .default_value("521icru")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("APPLICATION")
-                        .short("a")
-                        .long("app")
-                        .help("Name of the application.")
-                        .default_value("egs_chamber")
-                        .takes_value(true),
-                )
+                .arg(arg_input())
+                .arg(arg_output())
+                .arg(arg_pegsfile())
+                .arg(arg_application())
                 .arg(
                     Arg::with_name("NTHREADS")
                         .long("nthreads")
@@ -85,11 +99,7 @@ fn create_app() -> clap::App<'static, 'static> {
                 .version(crate_version!())
                 .author(crate_authors!())
                 .about("Show content of simulation report.")
-                .arg(
-                    Arg::with_name("PATH")
-                        .help("Path to a .json file containing simulation report.")
-                        .index(1),
-                )
+                .arg(arg_report())
                 .arg(
                     Arg::with_name("WHAT")
                         .help("Show which aspects of the report")
@@ -103,30 +113,15 @@ fn create_app() -> clap::App<'static, 'static> {
                 .version(crate_version!())
                 .author(crate_authors!())
                 .about("Use egs_view to visualize simulation geometry of a report.")
-                .arg(
-                    Arg::with_name("PATH")
-                        .help("Path to a .json file containing simulation report.")
-                        .index(1),
-                )
+                .arg(arg_report())
         )
         .subcommand(
             SubCommand::with_name("rerun")
                 .version(crate_version!())
                 .author(crate_authors!())
                 .about("Rerun a finished simulation.")
-                .arg(
-                    Arg::with_name("PATH")
-                        .help("Path to a .json file containing simulation report.")
-                        .index(1),
-                )
-                .arg(
-                    Arg::with_name("OUTPUT")
-                        .short("o")
-                        .long("output")
-                        .takes_value(true)
-                        .help("Name of output file.")
-                        .required(true), // guess it?
-                )
+                .arg(arg_report())
+                .arg(arg_output())
         )
         .subcommand(
             SubCommand::with_name("fmt")
@@ -134,9 +129,8 @@ fn create_app() -> clap::App<'static, 'static> {
                 .author(crate_authors!())
                 .about("Reformat .egsinp file.")
                 .arg(
-                    Arg::with_name("PATH")
+                    arg_input()
                         .help("Path to a .egsinp file that should be formatted.")
-                        .index(1),
                 )
         )
         .subcommand(
@@ -145,10 +139,8 @@ fn create_app() -> clap::App<'static, 'static> {
                 .author(crate_authors!())
                 .about("Split .egsinp file into chunks that are runnable on a cluster.")
                 .arg(
-                    Arg::with_name("INPUT")
+                    arg_input()
                         .help("Path to a input file that should be split.")
-                        .required(true)
-                        .index(1),
                 )
                 .arg(
                     Arg::with_name("NFILES")
@@ -165,50 +157,17 @@ fn create_app() -> clap::App<'static, 'static> {
                         .required(true)
                         .takes_value(true),
                 )
-                .arg(
-                    Arg::with_name("OUTPUT")
-                        .short("o")
-                        .long("output")
-                        .takes_value(true)
-                        .help("Path to directory, where output should be saved.")
-                        .required(true),
-                )
-                .arg(
-                    Arg::with_name("PEGSFILE")
-                        .short("p")
-                        .long("pegsfile")
-                        .help("Name of the pegsfile.")
-                        .default_value("521icru")
-                        .takes_value(true),
-                )
-                .arg(
-                    Arg::with_name("APPLICATION")
-                        .short("a")
-                        .long("app")
-                        .help("Name of the application.")
-                        .default_value("egs_chamber")
-                        .takes_value(true),
-                )
+                .arg(arg_output())
+                .arg(arg_pegsfile())
+                .arg(arg_application())
         )
         .subcommand(
             SubCommand::with_name("combine")
                 .version(crate_version!())
                 .author(crate_authors!())
                 .about("Combine multiple .henout files into one.")
-                .arg(
-                    Arg::with_name("INPUT")
-                        .help("Path to a directory containing files that should be combined.")
-                        .required(true)
-                        .index(1),
-                )
-                .arg(
-                    Arg::with_name("OUTPUT")
-                        .short("o")
-                        .long("output")
-                        .takes_value(true)
-                        .help("Path to directory, where output should be saved.")
-                        .required(true),
-                )
+                .arg(arg_input())
+                .arg(arg_output())
         )
 }
 
@@ -288,22 +247,22 @@ impl SubCmd for SplitConfig {
 
 #[derive(Debug)]
 struct FormatConfig {
-    path: PathBuf,
+    input_path: PathBuf,
 }
 
 impl SubCmd for FormatConfig {
     fn parse(m: &ArgMatches) -> Result<Self> {
-        let path = m.get_abspath("PATH")?;
-        Ok(Self { path })
+        let input_path = m.get_abspath("INPUT")?;
+        Ok(Self { input_path })
     }
 
     fn run(&self) -> Result<()> {
         let formatted = {
-            let file = fs::File::open(&self.path).map_err(debug_string)?;
+            let file = fs::File::open(&self.input_path).map_err(debug_string)?;
             let mut reader = BufReader::new(file);
             TokenStream::parse_reader(&mut reader)?.to_string()
         };
-        fs::File::create(&self.path)
+        fs::File::create(&self.input_path)
             .map_err(debug_string)?
             .write_all(formatted.as_str().as_bytes())
             .map_err(debug_string)
