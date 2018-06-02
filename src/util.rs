@@ -32,6 +32,7 @@ impl HenInfo {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WithMeta<T> {
     hen:HenInfo,
+    #[serde(flatten)]
     content:T,
 }
 
