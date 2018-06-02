@@ -11,9 +11,43 @@ use std::fmt::Debug;
 
 pub type Result<T> = std::result::Result<T, String>;
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct HenInfo {
+    pub version:String,
+    pub commit: String,
+    pub timestamp: String,
+    pub api_version:usize
+}
+
+impl HenInfo {
+    pub fn new() -> Self {
+        let commit = env!("HEN_COMMIT_HASH").to_string();
+        let timestamp = env!("HEN_COMMIT_TIME").to_string();
+        let version = env!("CARGO_PKG_VERSION").to_string();
+        let api_version = 0;
+        Self {version, commit, timestamp, api_version}
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WithMeta<T> {
+    hen:HenInfo,
+    content:T,
+}
+
+impl<T> WithMeta<T> {
+    pub fn new(content:T) -> Self {
+        let hen = HenInfo::new();
+        WithMeta {content, hen}
+    }
+}
+
 pub fn save<T: Serialize>(path: &Path, obj: &T) -> Result<()> {
-    let file = fs::File::create(path).map_err(|err| format!("{:?}", err))?;
-    serde_format::to_writer_pretty(file, obj).map_err(|err| format!("{:?}", err))?;
+    let file = fs::File::create(path)
+        .map_err(debug_string)?;
+    let obj = WithMeta::new(obj);
+    serde_format::to_writer_pretty(file, &obj)
+        .map_err(debug_string)?;
     return Ok(());
 }
 
@@ -22,9 +56,11 @@ pub fn load<T>(path: &Path) -> Result<T>
 where
     for<'de> T: serde::Deserialize<'de>,
 {
-    let reader = fs::File::open(path).map_err(|e| format!("{:}", e).to_string())?;
-    let ret: T = serde_format::from_reader(reader).map_err(|e| format!("{:?}", e).to_string())?;
-    return Ok(ret);
+    let reader = fs::File::open(path)
+        .map_err(debug_string)?;
+    let ret: WithMeta<T> = serde_format::from_reader(reader)
+        .map_err(debug_string)?;
+    return Ok(ret.content);
 }
 
 pub fn debug_string<E: Debug>(e: E) -> String {

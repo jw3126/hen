@@ -1,4 +1,11 @@
 {
+  "hen": {
+    "version": "0.1.0",
+    "commit": "706e85118288b0746fd355c93a8849e2c3bac1bc",
+    "timestamp": "2018-06-01 11:54:47 +0200",
+    "api_version": 0
+  },
+  "content": {
   "input": {
     "prototype": {
       "application": "egs_chamber",
@@ -142,4 +149,5 @@
       "exit_status": 0
     }
   ]
+}
 }
