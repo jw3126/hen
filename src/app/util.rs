@@ -1,8 +1,49 @@
-use clap::ArgMatches;
+use clap::{Arg, ArgMatches};
 use std::path::{Path, PathBuf};
 use std::env::current_dir;
 use std;
 use util::Result;
+
+pub fn arg_input() -> Arg<'static, 'static> {
+    Arg::with_name("INPUT")
+        .index(1)
+        .takes_value(true)
+        .required(true)
+        .help("Name of the input file.")
+}
+
+pub fn arg_output() -> Arg<'static, 'static> {
+    Arg::with_name("OUTPUT")
+        .short("o")
+        .long("output")
+        .takes_value(true)
+        .help("Path where output should be stored.")
+        .required(true)
+}
+
+pub fn arg_pegsfile() -> Arg<'static, 'static> {
+    Arg::with_name("PEGSFILE")
+        .short("p")
+        .long("pegsfile")
+        .help("Name of the pegsfile.")
+        .default_value("521icru")
+        .takes_value(true)
+}
+
+pub fn arg_application() -> Arg<'static, 'static> {
+    Arg::with_name("APPLICATION")
+        .short("a")
+        .long("app")
+        .help("Name of the application.")
+        .default_value("egs_chamber")
+        .takes_value(true)
+}
+
+pub fn arg_report() -> Arg<'static, 'static> {
+    Arg::with_name("PATH")
+        .help("Path to a .henout file containing simulation report.")
+        .index(1)
+}
 
 pub trait SubCmd
 where

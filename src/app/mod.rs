@@ -11,53 +11,12 @@ use tokenizer::TokenStream;
 use std::io::BufReader;
 use std::ffi::OsStr;
 use serde_json;
-use util::read_paths_in_dir;
+use util::{read_paths_in_dir, HenInfo};
 
 mod util;
 mod combine;
-use app::util::{GetMatch, SubCmd};
+use app::util::{arg_application, arg_input, arg_output, arg_pegsfile, arg_report, GetMatch, SubCmd};
 use app::combine::CombineConfig;
-
-fn arg_input() -> Arg<'static, 'static> {
-    Arg::with_name("INPUT")
-        .index(1)
-        .takes_value(true)
-        .required(true)
-        .help("Name of the input file.")
-}
-
-fn arg_output() -> Arg<'static, 'static> {
-    Arg::with_name("OUTPUT")
-        .short("o")
-        .long("output")
-        .takes_value(true)
-        .help("Path where output should be stored.")
-        .required(true)
-}
-
-fn arg_pegsfile() -> Arg<'static, 'static> {
-    Arg::with_name("PEGSFILE")
-        .short("p")
-        .long("pegsfile")
-        .help("Name of the pegsfile.")
-        .default_value("521icru")
-        .takes_value(true)
-}
-
-fn arg_application() -> Arg<'static, 'static> {
-    Arg::with_name("APPLICATION")
-        .short("a")
-        .long("app")
-        .help("Name of the application.")
-        .default_value("egs_chamber")
-        .takes_value(true)
-}
-
-fn arg_report() -> Arg<'static, 'static> {
-    Arg::with_name("PATH")
-        .help("Path to a .henout file containing simulation report.")
-        .index(1)
-}
 
 fn create_app() -> clap::App<'static, 'static> {
     clap::App::new("hen")
@@ -538,7 +497,10 @@ pub fn app_main() -> Result<()> {
         ("fmt", Some(m)) => FormatConfig::main(m),
         ("split", Some(m)) => SplitConfig::main(m),
         ("combine", Some(m)) => CombineConfig::main(m),
-        ("", _) => Err("Try hen --help".to_string()),
+        ("", _) => Ok(println!(
+            "Welcome to hen!\n{}\nTry hen --help",
+            HenInfo::new()
+        )),
         x => Err(format!("Unknown subcommand {:?}. Try hen --help", x).to_string()),
     }
 }

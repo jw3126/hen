@@ -8,15 +8,16 @@ use std::path::{Path, PathBuf};
 use std;
 use std::fs;
 use std::fmt::Debug;
+use std::fmt;
 
 pub type Result<T> = std::result::Result<T, String>;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HenInfo {
-    pub version:String,
+    pub version: String,
     pub commit: String,
     pub timestamp: String,
-    pub api_version:usize
+    pub api_version: usize,
 }
 
 impl HenInfo {
@@ -25,30 +26,43 @@ impl HenInfo {
         let timestamp = env!("HEN_COMMIT_TIME").to_string();
         let version = env!("CARGO_PKG_VERSION").to_string();
         let api_version = 0;
-        Self {version, commit, timestamp, api_version}
+        Self {
+            version,
+            commit,
+            timestamp,
+            api_version,
+        }
+    }
+}
+
+impl fmt::Display for HenInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        writeln!(f, "commit version: {}", self.version)?;
+        writeln!(f, "commit hash: {}", self.commit)?;
+        writeln!(f, "commit time: {}", self.timestamp)?;
+        writeln!(f, "api version: {}", self.api_version)?;
+        Ok(())
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct WithMeta<T> {
-    hen:HenInfo,
+    hen: HenInfo,
     #[serde(flatten)]
-    content:T,
+    content: T,
 }
 
 impl<T> WithMeta<T> {
-    pub fn new(content:T) -> Self {
+    pub fn new(content: T) -> Self {
         let hen = HenInfo::new();
-        WithMeta {content, hen}
+        WithMeta { content, hen }
     }
 }
 
 pub fn save<T: Serialize>(path: &Path, obj: &T) -> Result<()> {
-    let file = fs::File::create(path)
-        .map_err(debug_string)?;
+    let file = fs::File::create(path).map_err(debug_string)?;
     let obj = WithMeta::new(obj);
-    serde_format::to_writer_pretty(file, &obj)
-        .map_err(debug_string)?;
+    serde_format::to_writer_pretty(file, &obj).map_err(debug_string)?;
     return Ok(());
 }
 
@@ -57,10 +71,8 @@ pub fn load<T>(path: &Path) -> Result<T>
 where
     for<'de> T: serde::Deserialize<'de>,
 {
-    let reader = fs::File::open(path)
-        .map_err(debug_string)?;
-    let ret: WithMeta<T> = serde_format::from_reader(reader)
-        .map_err(debug_string)?;
+    let reader = fs::File::open(path).map_err(debug_string)?;
+    let ret: WithMeta<T> = serde_format::from_reader(reader).map_err(debug_string)?;
     return Ok(ret.content);
 }
 
