@@ -241,7 +241,7 @@ dependencies = [
 
 [[package]]
 name = "hen"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "approx 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "assert_cli 0.5.6 (registry+https://github.com/rust-lang/crates.io-index)",

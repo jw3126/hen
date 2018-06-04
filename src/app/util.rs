@@ -23,7 +23,6 @@ pub fn arg_output() -> Arg<'static, 'static> {
 
 pub fn arg_cleanup() -> Arg<'static, 'static> {
     Arg::with_name("CLEANUP")
-        .short("c")
         .long("cleanup")
         .takes_value(true)
         .help("Delete files that are temporarily needed for running the simulation.")

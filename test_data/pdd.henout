@@ -1,0 +1,3442 @@
+{
+  "hen": {
+    "version": "0.2.0",
+    "commit": "f148e91a0b1895ceb0106b9f4135236560668a96",
+    "timestamp": "2018-06-04 15:47:31 +0200",
+    "api_version": 0
+  },
+  "input": {
+    "prototype": {
+      "application": "egs_chamber",
+      "content": "\n######################################## Define the geometry:\n#                                       \n\n:start geometry definition:\n\n\n\t#Messwelt\n\t:start geometry:\n\t\tname = Weltvolumen\n\t\tlibrary = egs_box\n\t\tbox size = 1000 1000 1000\n\t\t:start media input:\n\t\t\tmedia = AIR521ICRU\n\t\t:stop media input:\n\t:stop geometry:\n\t\n\t#grosses Wasserphantom \n\t:start geometry:    \n\t\tname = Wasserphantom\n       \t\tx-planes = -30.0 30.0\n       \t\ty-planes = -30.0 30.0\n       \t\tz-planes = -30.0 0.0\n       \t\t:start media input:        \n           \t\tmedia = H2O521ICRU\n          \t\tset medium = 0 0\n       \t\t:stop media input:\n       \t\tlibrary = egs_ndgeometry\n       \t\ttype = EGS_XYZGeometry\n   \t:stop geometry:\n\n\t#Wasservoxel r=1cm h=0,1cm als sensitives Volumen\n\t:start geometry:\n\t\tname = Wasservoxel_Zylinder\n\t\tlibrary = egs_cylinders\n\t\ttype = EGS_ZCylinders\n\t\tradii = 1\n\t\tmidpoint = 0 0 0\n\t\t:start media input:\n\t\t\tmedia = H2O521ICRU\n\t\t\t#media = voxel\n\t\t:stop media input:\n\t:stop geometry:\t\n\t\t\n\t:start geometry:\n\t\tname = Ebenen_Wasservoxel\n\t\tlibrary = egs_planes\n\t\ttype = EGS_Zplanes\n\t\t#abtrennen unterhalb Phantomoberflaeche, da sonst bug durch envelope mit Enhancement_Box an \tder Grenzflaeche\n\t\tpositions = -0.11 -0.01\n\t:stop geometry:\n\n\t:start geometry:\n\t\tname = Wasservoxel\n\t\tlibrary = egs_cdgeometry\n\t\tbase geometry = Ebenen_Wasservoxel\n\t\tset geometry = 0 Wasservoxel_Zylinder\n\t\tset label = Wasservoxel_label 0\n\t:stop geometry:\t\n\n\t#Box fuer enhancement\n\t:start geometry:\n\t\tname = Enhancement_Box\n\t\tlibrary = egs_box\n\t\tbox size = 2.5 2.5 1\n\t\t:start media input:\n\t\t\tmedia = H2O521ICRU\n\t\t\t#media = box\n\t\t:stop media input:\n\t\tset label = Enhancement_Box_label 0\n\t:stop geometry:\t\n\t\n\t#Zusammenfassen \n\n\t:start geometry:\n        \tname = Enhancement_mit_Voxel\n        \tlibrary  = egs_genvelope\n        \tbase geometry = Enhancement_Box\n\t\tinscribed geometries =  Wasservoxel\n   \t:stop geometry:\n\n\t# rechteckiger Schlauch fuer phase space scoring\n\n\t:start geometry:\n    \t\tlibrary = egs_ndgeometry\n\t\ttype = EGS_XYZGeometry  \n\t\tname = PSS_Box\n\t\tx-planes = -3 3\t\t\n\t\ty-planes = -3 3\n\t\tz-planes = -29 -0.01 \n\t\t:start media input:\n           \t\t media = H2O521ICRU\n\t   \t\t #media = PSS_Box\t\n        \t:stop media input:\n\t\tset label = PSS_Box_Label 0\n\t:stop geometry:\n\n\t:start geometry:\n        \tname = Wasserphantom_mit_PSS\n        \tlibrary  = egs_genvelope\n        \tbase geometry = Wasserphantom\n\t\tinscribed geometries =  PSS_Box\n   \t:stop geometry:\n\n\n\t#Loop bei der Wasservoxel+Enhancement-Box in z-Richtung verschoben werden\n\t\n\t:start input loop:\n\t\tloop count = 50\n\t\t# 1 = integer tiefe = Variablenname beginnt bei 0 in 0.015 Schritten\n\t\tloop variable = 1 tiefe 0.51 0.5\n\t\t:start geometry:\n\t\t\tlibrary = egs_gtransformed\n\t\t\tmy geometry = Wasservoxel\n\t\t\tname = Wasservoxel_$(tiefe)cm\n\t\t\t:start transformation:\n\t\t\t\ttranslation = 0 0 -$(tiefe)\n\t\t\t:stop transformation:\n\t\t:stop geometry:\n\n\t\t:start geometry:\n\t\t\tlibrary = egs_gtransformed\n\t\t\tmy geometry = Enhancement_Box\n\t\t\tname = Enhancement_Box_$(tiefe)cm\n\t\t\t:start transformation:\n\t\t\t\ttranslation = 0 0 -$(tiefe)\n\t\t\t:stop transformation:\n\t\t:stop geometry:\n\t\t\n\t\t:start geometry:\n        \t\tname = Enhancement_mit_Voxel_$(tiefe)cm\n        \t\tlibrary  = egs_genvelope\n        \t\tbase geometry = Enhancement_Box_$(tiefe)cm\n\t\t\tinscribed geometries =  Wasservoxel_$(tiefe)cm\n   \t\t:stop geometry:\n\n\t\t:start geometry:\n        \t\tname = Phantom_mit_Voxel_$(tiefe)\n        \t\tlibrary  = egs_genvelope\n        \t\tbase geometry = Wasserphantom\n\t\t\tinscribed geometries = Enhancement_mit_Voxel_$(tiefe)cm\n   \t\t:stop geometry:\n\n\t\t:start geometry:\n        \t\tname = Messwelt_$(tiefe)\n        \t\tlibrary  = egs_genvelope\n        \t\tbase geometry = Weltvolumen\n\t\t\tinscribed geometries = Phantom_mit_Voxel_$(tiefe)\n   \t\t:stop geometry:\n\t:stop input loop:\n\t\n\t\nsimulation geometry =  Messwelt_0.51 #Wasserphantom_mit_PSS\n:stop geometry definition:\n\n\n######################################## Define the source:\n#                                        \n#\n:start source definition:\n\t:start source:\n\t\tlibrary = egs_parallel_beam\n\t\tname = my_parallel_source\n\t\t:start shape:\n\t\t    library = egs_rectangle\n\t\t\t#10cm x10cm\n\t\t    rectangle = -5 -5 5 5 \n\t\t:stop shape:\t\t\t\t\n\t\tdirection = 0 0 -1\t\t\n\t\tcharge = 0\t\t\t\n\t\t:start spectrum:\n\t\t\ttype = tabulated spectrum\n\t\t\tspectrum file = mohan6.spectrum\n\t\t:stop spectrum:\n\t    :stop source:\n\t    :start source:\n\t\tlibrary = egs_transformed_source\n\t\tname = my_source\n\t\tsource name = my_parallel_source\n\t\t:start transformation:\n\t\t    translation = 0 0 100\n\t\t:stop transformation:\n\t    :stop source:\n\n    simulation source = my_source\n\n:stop source definition:\n########################################\n\n\n\n:start rng definition:\n\n  type = ranmar\n  initial seeds = 1 42\n\n:stop rng definition:\n\n:start run control:\n\tncase = 1400\n\tnbatch = 100\n:stop run control:\n\n######################################### Transport parameters\n#                                         you can add any other \n#                                         supported by EGSnrc\n#\n:start MC transport parameter:\n\n    Global ECUT = 10.2\n    Global PCUT = 0.1\n\n:stop MC transport parameter:\n\n:start scoring options:\n#fuer PSS wird die erste geometry im scoring-Block verwendet\n\n\t:start calculation geometry:\n\t\tgeometry name    = PSS_Box\n\t\tcavity regions   = PSS_Box_Label\n        \tcavity mass      = 1\n\t\tcavity geometry  = PSS_Box\n\t\tenhance regions  = -1\n\t\tenhancement      = 128\n    \t:stop calculation geometry:\n\t\n\n\t:start input loop:\n\t\tloop count = 50\n\t\t# 1 = integer tiefe = Variablenname beginnt bei 0 in 0.015 Schritten\n\t\tloop variable = 1 tiefe 0.51 0.5\n\t\n\t\t:start calculation geometry:\n\t\t\tgeometry name = Messwelt_$(tiefe)\n\t\t\tcavity regions = 3\n\t\t\tcavity mass = 1\n\t\t\tcavity geometry = Enhancement_mit_Voxel_$(tiefe)cm\n\t\t\tenhance regions = 2 3\n\t\t\tenhancement = 128 128\n    \t\t:stop calculation geometry:\n\t:stop input loop:\n\n:stop scoring options:\n\n:start variance reduction:\n   \tcs enhancement = 1\n\tTmpPhsp = 1\n    :start range rejection:\n\trejection = 256\n\tEsave = 0.5\n\trejection range medium = H2O521ICRU\n\tcavity geometry = Wasservoxel\n    :stop range rejection:\n:stop variance reduction:\n\n\n#:start ausgab object definition:\n#\n#    :start ausgab object:\n#\n#        library = egs_track_scoring\n#        score photons   = yes\n#        score electrons = yes\n#        score positrons = yes\n# \tfile name addition = some_string\n#\n#    :stop ausgab object:\n#\n#:stop ausgab object definition:\n",
+      "pegsfile": "521icru",
+      "checksum": "3324eb185c90383f69cd44a203f0bf72770065c4043c97fb409ceaee63834a92",
+      "filename": "PDD_Wasservoxel_3574.egsinp"
+    },
+    "seeds": [
+      [
+        42,
+        1
+      ],
+      [
+        42,
+        2
+      ],
+      [
+        42,
+        3
+      ],
+      [
+        42,
+        4
+      ],
+      [
+        42,
+        5
+      ],
+      [
+        42,
+        6
+      ],
+      [
+        42,
+        7
+      ],
+      [
+        42,
+        8
+      ]
+    ],
+    "ncases": [
+      175,
+      175,
+      175,
+      175,
+      175,
+      175,
+      175,
+      175
+    ]
+  },
+  "single_runs": [
+    {
+      "input": {
+        "Available": {
+          "application": "egs_chamber",
+          "content": ":start geometry definition:\n    :start geometry:\n        name = Weltvolumen\n        library = egs_box\n        box size = 1000 1000 1000\n        :start media input:\n            media = AIR521ICRU\n        :stop media input:\n    :stop geometry:\n    :start geometry:\n        name = Wasserphantom\n        x-planes = -30.0 30.0\n        y-planes = -30.0 30.0\n        z-planes = -30.0 0.0\n        :start media input:\n            media = H2O521ICRU\n            set medium = 0 0\n        :stop media input:\n        library = egs_ndgeometry\n        type = EGS_XYZGeometry\n    :stop geometry:\n    :start geometry:\n        name = Wasservoxel_Zylinder\n        library = egs_cylinders\n        type = EGS_ZCylinders\n        radii = 1\n        midpoint = 0 0 0\n        :start media input:\n            media = H2O521ICRU\n        :stop media input:\n    :stop geometry:\n    :start geometry:\n        name = Ebenen_Wasservoxel\n        library = egs_planes\n        type = EGS_Zplanes\n        positions = -0.11 -0.01\n    :stop geometry:\n    :start geometry:\n        name = Wasservoxel\n        library = egs_cdgeometry\n        base geometry = Ebenen_Wasservoxel\n        set geometry = 0 Wasservoxel_Zylinder\n        set label = Wasservoxel_label 0\n    :stop geometry:\n    :start geometry:\n        name = Enhancement_Box\n        library = egs_box\n        box size = 2.5 2.5 1\n        :start media input:\n            media = H2O521ICRU\n        :stop media input:\n        set label = Enhancement_Box_label 0\n    :stop geometry:\n    :start geometry:\n        name = Enhancement_mit_Voxel\n        library = egs_genvelope\n        base geometry = Enhancement_Box\n        inscribed geometries = Wasservoxel\n    :stop geometry:\n    :start geometry:\n        library = egs_ndgeometry\n        type = EGS_XYZGeometry\n        name = PSS_Box\n        x-planes = -3 3\n        y-planes = -3 3\n        z-planes = -29 -0.01\n        :start media input:\n            media = H2O521ICRU\n        :stop media input:\n        set label = PSS_Box_Label 0\n    :stop geometry:\n    :start geometry:\n        name = Wasserphantom_mit_PSS\n        library = egs_genvelope\n        base geometry = Wasserphantom\n        inscribed geometries = PSS_Box\n    :stop geometry:\n    :start input loop:\n        loop count = 50\n        loop variable = 1 tiefe 0.51 0.5\n        :start geometry:\n            library = egs_gtransformed\n            my geometry = Wasservoxel\n            name = Wasservoxel_$(tiefe)cm\n            :start transformation:\n                translation = 0 0 -$(tiefe)\n            :stop transformation:\n        :stop geometry:\n        :start geometry:\n            library = egs_gtransformed\n            my geometry = Enhancement_Box\n            name = Enhancement_Box_$(tiefe)cm\n            :start transformation:\n                translation = 0 0 -$(tiefe)\n            :stop transformation:\n        :stop geometry:\n        :start geometry:\n            name = Enhancement_mit_Voxel_$(tiefe)cm\n            library = egs_genvelope\n            base geometry = Enhancement_Box_$(tiefe)cm\n            inscribed geometries = Wasservoxel_$(tiefe)cm\n        :stop geometry:\n        :start geometry:\n            name = Phantom_mit_Voxel_$(tiefe)\n            library = egs_genvelope\n            base geometry = Wasserphantom\n            inscribed geometries = Enhancement_mit_Voxel_$(tiefe)cm\n        :stop geometry:\n        :start geometry:\n            name = Messwelt_$(tiefe)\n            library = egs_genvelope\n            base geometry = Weltvolumen\n            inscribed geometries = Phantom_mit_Voxel_$(tiefe)\n        :stop geometry:\n    :stop input loop:\n    simulation geometry = Messwelt_0.51\n:stop geometry definition:\n:start source definition:\n    :start source:\n        library = egs_parallel_beam\n        name = my_parallel_source\n        :start shape:\n            library = egs_rectangle\n            rectangle = -5 -5 5 5\n        :stop shape:\n        direction = 0 0 -1\n        charge = 0\n        :start spectrum:\n            type = tabulated spectrum\n            spectrum file = mohan6.spectrum\n        :stop spectrum:\n    :stop source:\n    :start source:\n        library = egs_transformed_source\n        name = my_source\n        source name = my_parallel_source\n        :start transformation:\n            translation = 0 0 100\n        :stop transformation:\n    :stop source:\n    simulation source = my_source\n:stop source definition:\n:start rng definition:\n    type = ranmar\n    initial seeds = 42 1\n:stop rng definition:\n:start run control:\n    ncase = 175\n    nbatch = 100\n:stop run control:\n:start MC transport parameter:\n    Global ECUT = 10.2\n    Global PCUT = 0.1\n:stop MC transport parameter:\n:start scoring options:\n    :start calculation geometry:\n        geometry name = PSS_Box\n        cavity regions = PSS_Box_Label\n        cavity mass = 1\n        cavity geometry = PSS_Box\n        enhance regions = -1\n        enhancement = 128\n    :stop calculation geometry:\n    :start input loop:\n        loop count = 50\n        loop variable = 1 tiefe 0.51 0.5\n        :start calculation geometry:\n            geometry name = Messwelt_$(tiefe)\n            cavity regions = 3\n            cavity mass = 1\n            cavity geometry = Enhancement_mit_Voxel_$(tiefe)cm\n            enhance regions = 2 3\n            enhancement = 128 128\n        :stop calculation geometry:\n    :stop input loop:\n:stop scoring options:\n:start variance reduction:\n    cs enhancement = 1\n    TmpPhsp = 1\n    :start range rejection:\n        rejection = 256\n        Esave = 0.5\n        rejection range medium = H2O521ICRU\n        cavity geometry = Wasservoxel\n    :stop range rejection:\n:stop variance reduction:",
+          "pegsfile": "521icru",
+          "checksum": "539d998c360663317b0134e19b1fbc38d9bf5c45f21f9d5a335bb5ea703fa6a6",
+          "filename": "PDD_Wasservoxel_3574.egsinp"
+        }
+      },
+      "stderr": {
+        "Available": "Processing input loop\nProcessing input loop\n**********************************************\n**********************************************\n"
+      },
+      "stdout": {
+        "Available": "In EGS_Application::initSimulation()\n================================================================================\nEGSnrc version 4 for linux64                           Mon Jun  4 16:54:44 2018\n================================================================================\nconfiguration...linux64\nuser code.......egs_chamber\npegs file.......521icru on HEN_HOUSE\nusing host......ptwlinuxvm\ninput file......539d998c360663317b0134e19b1fbc38d9bf5c45f21f9d5a335bb5ea703fa6a6\noutput file(s)..539d998c360663317b0134e19b1fbc38d9bf5c45f21f9d5a335bb5ea703fa6a6\n================================================================================\n\n               *************************************************\n               *                                               *\n               *               egs_chamber CSE)                *\n               *                                               *\n               *************************************************\n\nThis is EGS_ChamberApplication Revision: 1.21  based on\n      EGS_AdvancedApplication Revision: 1.39 \n\nIn initCrossSections(): spin effects = 1\nProperty Photon cross-sections output: 0\nProperty Photonuclear attenuation: 0\nProperty Bound Compton scattering: 3\nProperty Radiative Compton corrections: 0\nProperty Rayleigh scattering: 0\nProperty Atomic relaxations: 1\nProperty Photoelectron angular sampling: 1\nProperty Spin effects: 1\nProperty Triplet production: 0\nProperty Brems cross sections: 0\nProperty Brems angular sampling: 1\nProperty Pair cross sections: 0\nProperty Pair angular sampling: 1\nProperty Electron-step algorithm: 0\nProperty Boundary crossing algorithm: 0\n ===> Photonuclear flag:   0\n Found medium with gas pressure\n Rayleigh data available for medium  2 in PEGS4 data set.\n\n(Re)-initializing photon cross section data\nUsing data files from the series xcom\n\nPhoton cross sections: xcom Compton cross sections: default\nUsing Compton cross sections from /home/ptwlinuxvm/EGSnrc/HEN_HOUSE/data/compton_sigma.data\nWorking on medium   1 ... OK\nWorking on medium   2 ... OK\n  Reading screened Rutherford MS data ...............  done \n\n\nReading spin data base from /home/ptwlinuxvm/EGSnrc/HEN_HOUSE/data/spinms.data\nEGSnrc spin data, version 2.0   \nData generated on a machine with 1234 endianess\nThe endianess of this CPU is 1234\nRanges:      1.00   100.00  0.30054  1.00000\n\n\n  medium    1 .....................  done\n  medium    2 .....................  done\n  \n  Medium            1  sige =    6.4595132015164030        6.2354615343201143       monotone =  F F\n  Medium            2  sige =    6.3784170227787529        6.1807995067678911       monotone =  F F\n  \n  Initializing tmxs for estepe =   0.25000000000000000       and ximax =   0.50000000000000000     \n  \n Output from subroutine EDGSET:\n ==============================\n Atomic relaxations requested! \n\n\n Reading photo-absorption data ..... Done\n\n Reading relaxation data ..... Done\n\n Reading photo cross section data ..... Done\n\n\nReading EADL relaxation data ......\n-> Element Z =   6 has  4 shells\n-> Element Z =   7 has  4 shells\n-> Element Z =   8 has  4 shells\n-> Element Z =  18 has  7 shells\n-> Element Z =   1 has  1 shells\n...... Done.\n\n Bound Compton scattering requested, reading data ......  Done\n\n Initializing Bound Compton scattering ......\n Medium   1 has  18 shells: \n  1  10  1  0.00004 0.210E+02     0.285\n  2  11  2  0.00004 0.110E+03     0.011\n  3  12  3  0.00004 0.669E+02     0.011\n  4  13  1  0.21603 0.178E+02     0.410\n  5  14  2  0.21603 0.921E+02     0.015\n  6  15  3  0.21603 0.558E+02     0.014\n  7  16  4  0.10801 0.558E+02     0.014\n  8  17  1  0.05805 0.155E+02     0.543\n  9  18  2  0.05805 0.793E+02     0.024\n 10  19  3  0.05805 0.479E+02     0.014\n 11  20  4  0.05805 0.479E+02     0.014\n 12  72  1  0.00129 0.671E+01     3.206\n 13  73  2  0.00129 0.271E+02     0.326\n 14  74  3  0.00129 0.142E+02     0.251\n 15  75  4  0.00257 0.142E+02     0.249\n 16  76  5  0.00129 0.889E+02     0.029\n 17  77  5  0.00129 0.606E+02     0.016\n 18  78  5  0.00257 0.606E+02     0.016\n Medium   2 has   5 shells: \n  1   1  1  0.20000 0.116E+03     0.014\n  2  17  1  0.20000 0.155E+02     0.543\n  3  18  2  0.20000 0.793E+02     0.024\n  4  19  3  0.20000 0.479E+02     0.014\n  5  20  4  0.20000 0.479E+02     0.014\n...... Done.\n\n EGSnrc SUCCESSFULLY 'HATCHED' FOR     2 MEDIA.\n\n\nThe following media are defined:\n================================\n\n  0  AIR521ICRU               AE= 0.5210 AP= 0.0100 0\n  1  H2O521ICRU               AE= 0.5210 AP= 0.0100 1\n\n\nTransport parameter and cross section options:\n==============================================\nPhoton cross sections                             xcom            \nCompton cross sections                            default         \nGlobal Pcut                                       0.1\nPair cross sections                               BH\nPair angular sampling                             Simple\nTriplet production                                Off\nBound Compton scattering                          norej\nRadiative Compton corrections                     Off\nRayleigh scattering                               Off\nAtomic relaxations                                On\nPhotoelectron angular sampling                    On\nPhotonuclear attenuation                          Off\nPhotonuclear cross sections                       default         \n\nGlobal Ecut                                       10.2\nBrems cross sections                              BH\nBrems angular sampling                            KM\nSpin effects                                      On\nElectron Impact Ionization                        Off             \nGlobal Smax                                       1e+10\nESTEPE                                            0.25\nXimax                                             0.5\nBoundary crossing algorithm                       Exact\nSkin depth for BCA                                3\nElectron-step algorithm                           EGSnrc\n==============================================\n\ninitScoring: missing/wrong 'sub geometries'  for geometry 'PSS_Box'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_4.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_4.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_5.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_5.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_6.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_6.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_7.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_7.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_8.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_8.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_9.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_9.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_10.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_10.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_11.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_11.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_12.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_12.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_13.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_13.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_14.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_14.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_15.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_15.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_16.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_16.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_17.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_17.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_18.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_18.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_19.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_19.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_20.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_20.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_21.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_21.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_22.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_22.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_23.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_23.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_24.01'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_24.51'\ninitScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_25.01'\n\n=========================positioning uncertainty=========================\nIsocenter positioning uncertainty option is set OFF.\n\nCavity positioning uncertainty option is set OFF.\n\nNumber of uncorrelated estimators is 0 among 51 geometries.\nNumber of correlated estimators is 0 among 51 geometries.\n\n=========================================================================EGS_ObjectFactory::createObjects(): the input is not of type ausgab object definition and also does not have items of this type\n\n\n======================== geometry =====================\n type = EGS_EnvelopeGeometry\n name = Messwelt_0.51\n number of regions = 4\n base geometry = Weltvolumen (type EGS_Box)\n inscribed geometries:\n   Phantom_mit_Voxel_0.51 (type EGS_EnvelopeGeometry)\n=======================================================\n\n\nThe simulation uses the following source:\n=========================================\n Transformed Parallel beam from a shape of type rectangle with tabulated histogram spectrum defined in mohan6.spectrum, photons\n\n\nRandom number generator:\n============================================\n  type                = ranmar\n  high resolution     = no\n  initial seeds       = 42 1\n  numbers used so far = 0\n\n\nVariance reduction\n====================================================\nPhoton splitting = off\nRange rejection = Russian Roullette (RR)\n    rejection in cavity for E < 0.5\n    else RR with survival probability 0.00390625\n\tmultiple cavity option is turned ON\n\tfollowing cavity-geometries are used:\n\t1) PSS_Box -> PSS_Box\n\t2) Messwelt_0.51 -> Enhancement_mit_Voxel_0.51cm\n\t3) Messwelt_1.01 -> Enhancement_mit_Voxel_1.01cm\n\t4) Messwelt_1.51 -> Enhancement_mit_Voxel_1.51cm\n\t5) Messwelt_2.01 -> Enhancement_mit_Voxel_2.01cm\n\t6) Messwelt_2.51 -> Enhancement_mit_Voxel_2.51cm\n\t7) Messwelt_3.01 -> Enhancement_mit_Voxel_3.01cm\n\t8) Messwelt_3.51 -> Enhancement_mit_Voxel_3.51cm\n\t9) Messwelt_4.01 -> Enhancement_mit_Voxel_4.01cm\n\t10) Messwelt_4.51 -> Enhancement_mit_Voxel_4.51cm\n\t11) Messwelt_5.01 -> Enhancement_mit_Voxel_5.01cm\n\t12) Messwelt_5.51 -> Enhancement_mit_Voxel_5.51cm\n\t13) Messwelt_6.01 -> Enhancement_mit_Voxel_6.01cm\n\t14) Messwelt_6.51 -> Enhancement_mit_Voxel_6.51cm\n\t15) Messwelt_7.01 -> Enhancement_mit_Voxel_7.01cm\n\t16) Messwelt_7.51 -> Enhancement_mit_Voxel_7.51cm\n\t17) Messwelt_8.01 -> Enhancement_mit_Voxel_8.01cm\n\t18) Messwelt_8.51 -> Enhancement_mit_Voxel_8.51cm\n\t19) Messwelt_9.01 -> Enhancement_mit_Voxel_9.01cm\n\t20) Messwelt_9.51 -> Enhancement_mit_Voxel_9.51cm\n\t21) Messwelt_10.01 -> Enhancement_mit_Voxel_10.01cm\n\t22) Messwelt_10.51 -> Enhancement_mit_Voxel_10.51cm\n\t23) Messwelt_11.01 -> Enhancement_mit_Voxel_11.01cm\n\t24) Messwelt_11.51 -> Enhancement_mit_Voxel_11.51cm\n\t25) Messwelt_12.01 -> Enhancement_mit_Voxel_12.01cm\n\t26) Messwelt_12.51 -> Enhancement_mit_Voxel_12.51cm\n\t27) Messwelt_13.01 -> Enhancement_mit_Voxel_13.01cm\n\t28) Messwelt_13.51 -> Enhancement_mit_Voxel_13.51cm\n\t29) Messwelt_14.01 -> Enhancement_mit_Voxel_14.01cm\n\t30) Messwelt_14.51 -> Enhancement_mit_Voxel_14.51cm\n\t31) Messwelt_15.01 -> Enhancement_mit_Voxel_15.01cm\n\t32) Messwelt_15.51 -> Enhancement_mit_Voxel_15.51cm\n\t33) Messwelt_16.01 -> Enhancement_mit_Voxel_16.01cm\n\t34) Messwelt_16.51 -> Enhancement_mit_Voxel_16.51cm\n\t35) Messwelt_17.01 -> Enhancement_mit_Voxel_17.01cm\n\t36) Messwelt_17.51 -> Enhancement_mit_Voxel_17.51cm\n\t37) Messwelt_18.01 -> Enhancement_mit_Voxel_18.01cm\n\t38) Messwelt_18.51 -> Enhancement_mit_Voxel_18.51cm\n\t39) Messwelt_19.01 -> Enhancement_mit_Voxel_19.01cm\n\t40) Messwelt_19.51 -> Enhancement_mit_Voxel_19.51cm\n\t41) Messwelt_20.01 -> Enhancement_mit_Voxel_20.01cm\n\t42) Messwelt_20.51 -> Enhancement_mit_Voxel_20.51cm\n\t43) Messwelt_21.01 -> Enhancement_mit_Voxel_21.01cm\n\t44) Messwelt_21.51 -> Enhancement_mit_Voxel_21.51cm\n\t45) Messwelt_22.01 -> Enhancement_mit_Voxel_22.01cm\n\t46) Messwelt_22.51 -> Enhancement_mit_Voxel_22.51cm\n\t47) Messwelt_23.01 -> Enhancement_mit_Voxel_23.01cm\n\t48) Messwelt_23.51 -> Enhancement_mit_Voxel_23.51cm\n\t49) Messwelt_24.01 -> Enhancement_mit_Voxel_24.01cm\n\t50) Messwelt_24.51 -> Enhancement_mit_Voxel_24.51cm\n\t51) Messwelt_25.01 -> Enhancement_mit_Voxel_25.01cm\n\nscoring phase-space at cavity of 'PSS_Box'\n\nphoton cross-section enhancement = On\n 1) PSS_Box\n    regions    : \n    enhancement: \n\n 2) Messwelt_0.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 3) Messwelt_1.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 4) Messwelt_1.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 5) Messwelt_2.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 6) Messwelt_2.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 7) Messwelt_3.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 8) Messwelt_3.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 9) Messwelt_4.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 10) Messwelt_4.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 11) Messwelt_5.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 12) Messwelt_5.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 13) Messwelt_6.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 14) Messwelt_6.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 15) Messwelt_7.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 16) Messwelt_7.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 17) Messwelt_8.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 18) Messwelt_8.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 19) Messwelt_9.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 20) Messwelt_9.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 21) Messwelt_10.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 22) Messwelt_10.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 23) Messwelt_11.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 24) Messwelt_11.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 25) Messwelt_12.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 26) Messwelt_12.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 27) Messwelt_13.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 28) Messwelt_13.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 29) Messwelt_14.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 30) Messwelt_14.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 31) Messwelt_15.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 32) Messwelt_15.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 33) Messwelt_16.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 34) Messwelt_16.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 35) Messwelt_17.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 36) Messwelt_17.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 37) Messwelt_18.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 38) Messwelt_18.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 39) Messwelt_19.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 40) Messwelt_19.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 41) Messwelt_20.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 42) Messwelt_20.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 43) Messwelt_21.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 44) Messwelt_21.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 45) Messwelt_22.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 46) Messwelt_22.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 47) Messwelt_23.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 48) Messwelt_23.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 49) Messwelt_24.01\n    regions    :  2 3\n    enhancement:  128 128\n\n 50) Messwelt_24.51\n    regions    :  2 3\n    enhancement:  128 128\n\n 51) Messwelt_25.01\n    regions    :  2 3\n    enhancement:  128 128\n\n\nregion by region ECUT = Off\n\n=============================================\n\n\nStarting simulation on Mon Jun  4 16:54:44 2018\n\n    Fresh simulation of 175 histories\n\n\n\nRunning 175 histories\n\n  Batch             CPU time        Result   Uncertainty(%)\n==========================================================\n      1                0.00              0         100.00\n      2                0.00              0         100.00\n      3                0.00              0         100.00\n      4                0.00              0         100.00\n      5                0.00              0         100.00\n      6                0.00              0         100.00\n      7                0.00              0         100.00\n      8                0.00              0         100.00\n      9                0.00              0         100.00\n     10                0.00              0         100.00\n     11                0.00              0         100.00\n     12                0.00              0         100.00\n     13                0.00              0         100.00\n     14                0.00              0         100.00\n     15                0.00              0         100.00\n     16                0.00              0         100.00\n     17                0.00              0         100.00\n     18                0.00              0         100.00\n     19                0.00              0         100.00\n     20                0.00              0         100.00\n     21                0.00              0         100.00\n     22                0.00              0         100.00\n     23                0.00              0         100.00\n     24                0.00              0         100.00\n     25                0.00              0         100.00\n     26                0.00              0         100.00\n     27                0.00              0         100.00\n     28                0.00              0         100.00\n     29                0.00              0         100.00\n     30                0.00              0         100.00\n     31                0.00              0         100.00\n     32                0.00              0         100.00\n     33                0.01              0         100.00\n     34                0.01              0         100.00\n     35                0.01              0         100.00\n     36                0.01              0         100.00\n     37                0.01              0         100.00\n     38                0.01              0         100.00\n     39                0.01              0         100.00\n     40                0.01              0         100.00\n     41                0.01              0         100.00\n     42                0.01              0         100.00\n     43                0.01              0         100.00\n     44                0.01              0         100.00\n     45                0.01              0         100.00\n     46                0.01              0         100.00\n     47                0.01              0         100.00\n     48                0.01              0         100.00\n     49                0.01              0         100.00\n     50                0.01              0         100.00\n     51                0.01              0         100.00\n     52                0.01              0         100.00\n     53                0.01              0         100.00\n     54                0.01              0         100.00\n     55                0.01              0         100.00\n     56                0.01              0         100.00\n     57                0.01              0         100.00\n     58                0.01              0         100.00\n     59                0.01              0         100.00\n     60                0.01              0         100.00\n     61                0.01              0         100.00\n     62                0.01              0         100.00\n     63                0.01              0         100.00\n     64                0.01              0         100.00\n     65                0.01              0         100.00\n     66                0.01              0         100.00\n     67                0.02              0         100.00\n     68                0.02              0         100.00\n     69                0.02              0         100.00\n     70                0.02              0         100.00\n     71                0.02              0         100.00\n     72                0.02              0         100.00\n     73                0.02              0         100.00\n     74                0.02              0         100.00\n     75                0.02              0         100.00\n     76                0.02              0         100.00\n     77                0.02              0         100.00\n     78                0.02              0         100.00\n     79                0.02              0         100.00\n     80                0.02              0         100.00\n     81                0.02              0         100.00\n     82                0.02              0         100.00\n     83                0.02              0         100.00\n     84                0.02              0         100.00\n     85                0.02              0         100.00\n     86                0.02              0         100.00\n     87                0.02              0         100.00\n     88                0.02              0         100.00\n     89                0.02              0         100.00\n     90                0.02              0         100.00\n     91                0.02              0         100.00\n     92                0.02              0         100.00\n     93                0.02              0         100.00\n     94                0.02              0         100.00\n     95                0.02              0         100.00\n     96                0.02              0         100.00\n     97                0.02              0         100.00\n     98                0.02              0         100.00\n     99                0.02              0         100.00\n    100                0.02              0         100.00\n\nRunning 75 histories\n\n  Batch             CPU time        Result   Uncertainty(%)\n==========================================================\n      1                0.02              0         100.00\n      2                0.02              0         100.00\n      3                0.02              0         100.00\n      4                0.02              0         100.00\n      5                0.02              0         100.00\n      6                0.02              0         100.00\n      7                0.02              0         100.00\n      8                0.02              0         100.00\n      9                0.02              0         100.00\n     10                0.02              0         100.00\n     11                0.02              0         100.00\n     12                0.02              0         100.00\n     13                0.02              0         100.00\n     14                0.02              0         100.00\n     15                0.02              0         100.00\n     16                0.03              0         100.00\n     17                0.03              0         100.00\n     18                0.03              0         100.00\n     19                0.03              0         100.00\n     20                0.03              0         100.00\n     21                0.03              0         100.00\n     22                0.03              0         100.00\n     23                0.03              0         100.00\n     24                0.03              0         100.00\n     25                0.04              0         100.00\n     26                0.04              0         100.00\n     27                0.04              0         100.00\n     28                0.04              0         100.00\n     29                0.04              0         100.00\n     30                0.04              0         100.00\n     31                0.04              0         100.00\n     32                0.04              0         100.00\n     33                0.04              0         100.00\n     34                0.04              0         100.00\n     35                0.04              0         100.00\n     36                0.04              0         100.00\n     37                0.04              0         100.00\n     38                0.04              0         100.00\n     39                0.04              0         100.00\n     40                0.04              0         100.00\n     41                0.04              0         100.00\n     42                0.04              0         100.00\n     43                0.04              0         100.00\n     44                0.04              0         100.00\n     45                0.04              0         100.00\n     46                0.04              0         100.00\n     47                0.04              0         100.00\n     48                0.04              0         100.00\n     49                0.04              0         100.00\n     50                0.04              0         100.00\n     51                0.04              0         100.00\n     52                0.04              0         100.00\n     53                0.04              0         100.00\n     54                0.04              0         100.00\n     55                0.04              0         100.00\n     56                0.04              0         100.00\n     57                0.04              0         100.00\n     58                0.04              0         100.00\n     59                0.04              0         100.00\n     60                0.04              0         100.00\n     61                0.05              0         100.00\n     62                0.05              0         100.00\n     63                0.05              0         100.00\n     64                0.05              0         100.00\n     65                0.05              0         100.00\n     66                0.05              0         100.00\n     67                0.05              0         100.00\n     68                0.05              0         100.00\n     69                0.05              0         100.00\n     70                0.05              0         100.00\n     71                0.05              0         100.00\n     72                0.05              0         100.00\n     73                0.05              0         100.00\n     74                0.05              0         100.00\n     75                0.06              0         100.00\n\n\nFinished simulation\n\nTotal cpu time for this run:            0.06 (sec.) 0.0000(hours)\nHistories per hour:                     1.05e+07      \nNumber of random numbers used:          177048        \nNumber of electron CH steps:            0             \nNumber of all electron steps:           0             \n\n\n last case = 175 fluence = 1.75\n\nGeometry                        Cavity dose      \n-----------------------------------------------\nPSS_Box                   0.0000e+00 +/- 100.000% (this MUST be zero!)\nMesswelt_0.51             7.4121e-13 +/- 100.000% \nMesswelt_1.01             3.1897e-12 +/- 80.147 % \nMesswelt_1.51             5.8830e-14 +/- 100.000% \nMesswelt_2.01             2.0786e-12 +/- 87.881 % \nMesswelt_2.51             6.9152e-13 +/- 82.924 % \nMesswelt_3.01             1.5000e-12 +/- 63.181 % \nMesswelt_3.51             2.9608e-12 +/- 69.066 % \nMesswelt_4.01             3.2876e-12 +/- 66.146 % \nMesswelt_4.51             2.8165e-12 +/- 55.365 % \nMesswelt_5.01             2.2584e-12 +/- 80.064 % \nMesswelt_5.51             9.9422e-13 +/- 66.417 % \nMesswelt_6.01             1.4854e-12 +/- 57.750 % \nMesswelt_6.51             1.2664e-12 +/- 82.651 % \nMesswelt_7.01             2.4033e-12 +/- 72.946 % \nMesswelt_7.51             1.6590e-12 +/- 83.231 % \nMesswelt_8.01             9.7631e-13 +/- 86.864 % \nMesswelt_8.51             5.0604e-13 +/- 89.666 % \nMesswelt_9.01             1.1093e-12 +/- 80.220 % \nMesswelt_9.51             8.9877e-14 +/- 100.000% \nMesswelt_10.01            2.1300e-12 +/- 68.883 % \nMesswelt_10.51            1.7464e-12 +/- 79.136 % \nMesswelt_11.01            1.6819e-12 +/- 97.459 % \nMesswelt_11.51            4.3722e-14 +/- 87.470 % \nMesswelt_12.01            3.0941e-14 +/- 100.000% \nMesswelt_12.51            1.8340e-13 +/- 85.499 % \nMesswelt_13.01            0.0000e+00 +/- 100.000% \nMesswelt_13.51            3.3032e-12 +/- 78.602 % \nMesswelt_14.01            9.0260e-13 +/- 100.000% \nMesswelt_14.51            1.0534e-12 +/- 87.050 % \nMesswelt_15.01            1.9903e-12 +/- 100.000% \nMesswelt_15.51            2.0476e-12 +/- 90.659 % \nMesswelt_16.01            4.0078e-13 +/- 100.000% \nMesswelt_16.51            3.7857e-13 +/- 100.000% \nMesswelt_17.01            1.8928e-12 +/- 100.000% \nMesswelt_17.51            1.8005e-12 +/- 63.143 % \nMesswelt_18.01            0.0000e+00 +/- 100.000% \nMesswelt_18.51            7.6497e-13 +/- 100.000% \nMesswelt_19.01            0.0000e+00 +/- 100.000% \nMesswelt_19.51            1.7385e-12 +/- 100.000% \nMesswelt_20.01            0.0000e+00 +/- 100.000% \nMesswelt_20.51            1.8508e-12 +/- 100.000% \nMesswelt_21.01            1.8566e-12 +/- 99.947 % \nMesswelt_21.51            7.9387e-14 +/- 84.401 % \nMesswelt_22.01            0.0000e+00 +/- 100.000% \nMesswelt_22.51            8.1397e-13 +/- 74.108 % \nMesswelt_23.01            1.9959e-12 +/- 100.000% \nMesswelt_23.51            0.0000e+00 +/- 100.000% \nMesswelt_24.01            0.0000e+00 +/- 100.000% \nMesswelt_24.51            2.2637e-12 +/- 79.935 % \nMesswelt_25.01            2.4685e-12 +/- 100.000% \n\n\n\n\n================================================================================\nFinished simulation\n\n  Elapsed time:                    0.5 s (  0.000 h)\n  CPU time:                        0.3 s (  0.000 h)\n  Ratio:                          1.758\n\n\nEnd of run                                             Mon Jun  4 16:54:44 2018\n================================================================================\nfinishSimulation(egs_chamber) 0\n"
+      },
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 7.4121e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 3.1897e-12,
+              "rstd": 0.80147
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 5.883e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 2.0786e-12,
+              "rstd": 0.87881
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 6.9152e-13,
+              "rstd": 0.8292400000000001
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 1.5e-12,
+              "rstd": 0.63181
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 2.9608e-12,
+              "rstd": 0.69066
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 3.2876e-12,
+              "rstd": 0.66146
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 2.8165e-12,
+              "rstd": 0.55365
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 2.2584e-12,
+              "rstd": 0.8006399999999999
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 9.9422e-13,
+              "rstd": 0.66417
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 1.4854e-12,
+              "rstd": 0.5775
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 1.2664e-12,
+              "rstd": 0.82651
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 2.4033e-12,
+              "rstd": 0.72946
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 1.659e-12,
+              "rstd": 0.83231
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 9.7631e-13,
+              "rstd": 0.8686400000000001
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 5.0604e-13,
+              "rstd": 0.89666
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 1.1093e-12,
+              "rstd": 0.8022
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 8.9877e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 2.13e-12,
+              "rstd": 0.6888299999999999
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 1.7464e-12,
+              "rstd": 0.79136
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 1.6819e-12,
+              "rstd": 0.9745900000000001
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 4.3722e-14,
+              "rstd": 0.8747
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 3.0941e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 1.834e-13,
+              "rstd": 0.8549899999999999
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 3.3032e-12,
+              "rstd": 0.78602
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 9.026e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 1.0534e-12,
+              "rstd": 0.8704999999999999
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 1.9903e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 2.0476e-12,
+              "rstd": 0.90659
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 4.0078e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 3.7857e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 1.8928e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 1.8005e-12,
+              "rstd": 0.63143
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 7.6497e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 1.7385e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 1.8508e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 1.8566e-12,
+              "rstd": 0.9994700000000001
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 7.9387e-14,
+              "rstd": 0.8440099999999999
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 8.1397e-13,
+              "rstd": 0.7410800000000001
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 1.9959e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 2.2637e-12,
+              "rstd": 0.79935
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 2.4685e-12,
+              "rstd": 1.0
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.06
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    },
+    {
+      "input": "Omitted",
+      "stderr": "Omitted",
+      "stdout": "Omitted",
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 4.0399e-13,
+              "rstd": 0.84024
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 3.4615e-12,
+              "rstd": 0.74483
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 2.3325e-12,
+              "rstd": 0.84813
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 8.3403e-13,
+              "rstd": 0.6690200000000001
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 2.3241e-12,
+              "rstd": 0.8529300000000001
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 1.118e-12,
+              "rstd": 0.46259999999999998
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 2.4735e-12,
+              "rstd": 0.6983
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 1.6324e-12,
+              "rstd": 0.50066
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 1.2828e-12,
+              "rstd": 0.68497
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 1.1643e-13,
+              "rstd": 0.7670399999999999
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 3.3204e-12,
+              "rstd": 0.96801
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 1.6977e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 3.1425e-13,
+              "rstd": 0.87568
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 2.3212e-12,
+              "rstd": 0.57418
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 2.1175e-12,
+              "rstd": 0.83167
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 1.1981e-12,
+              "rstd": 0.58184
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 2.0079e-12,
+              "rstd": 0.86542
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 8.7915e-13,
+              "rstd": 0.61994
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 1.1128e-12,
+              "rstd": 0.93599
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 1.6534e-12,
+              "rstd": 0.7697700000000001
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 4.7941e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 5.0323e-12,
+              "rstd": 0.97001
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 2.7688e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 8.8838e-13,
+              "rstd": 0.9591
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 8.0548e-13,
+              "rstd": 0.95571
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 3.3154e-13,
+              "rstd": 0.71961
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 3.1346e-13,
+              "rstd": 0.7062999999999999
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 6.5383e-12,
+              "rstd": 0.76822
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 2.9352e-12,
+              "rstd": 0.69577
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 8.5214e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 2.4328e-12,
+              "rstd": 0.94671
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 3.3228e-13,
+              "rstd": 0.75935
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 1.051e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 3.0516e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 7.4305e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 9.3388e-13,
+              "rstd": 0.93639
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 1.8555e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 5.0756e-13,
+              "rstd": 0.82339
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 1.8054e-12,
+              "rstd": 0.85532
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 4.6213e-12,
+              "rstd": 0.7825799999999999
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 2.9875e-12,
+              "rstd": 1.0
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.06
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    },
+    {
+      "input": "Omitted",
+      "stderr": "Omitted",
+      "stdout": "Omitted",
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 2.6479e-12,
+              "rstd": 0.6934699999999999
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 1.8152e-12,
+              "rstd": 0.61635
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 3.5479e-12,
+              "rstd": 0.5431900000000001
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 2.3665e-12,
+              "rstd": 0.6572199999999999
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 5.1096e-12,
+              "rstd": 0.59589
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 1.332e-12,
+              "rstd": 0.63457
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 4.2278e-12,
+              "rstd": 0.9388299999999999
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 4.3041e-12,
+              "rstd": 0.63181
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 2.3766e-12,
+              "rstd": 0.69121
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 2.5332e-12,
+              "rstd": 0.54661
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 6.0774e-12,
+              "rstd": 0.61403
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 1.5871e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 1.0855e-12,
+              "rstd": 0.70639
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 3.7806e-12,
+              "rstd": 0.76265
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 2.1346e-12,
+              "rstd": 0.71977
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 3.4652e-12,
+              "rstd": 0.67285
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 1.3003e-12,
+              "rstd": 0.9144599999999999
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 7.8854e-12,
+              "rstd": 0.66912
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 2.0211e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 2.7618e-12,
+              "rstd": 0.61881
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 1.2867e-12,
+              "rstd": 0.77386
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 6.4706e-13,
+              "rstd": 0.90158
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 2.6314e-12,
+              "rstd": 0.69318
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 2.6732e-12,
+              "rstd": 0.7844
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 2.3046e-12,
+              "rstd": 0.71154
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 1.6201e-12,
+              "rstd": 0.67137
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 1.3258e-12,
+              "rstd": 0.6641400000000001
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 1.6286e-12,
+              "rstd": 0.92688
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 1.1281e-12,
+              "rstd": 0.7437900000000001
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 8.3592e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 3.1506e-12,
+              "rstd": 0.7175499999999999
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 1.6838e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 3.5404e-12,
+              "rstd": 0.52658
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 1.1766e-12,
+              "rstd": 0.7569
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 1.3921e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 2.5545e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 1.6846e-12,
+              "rstd": 0.7081999999999999
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 1.117e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 2.2248e-12,
+              "rstd": 0.9434600000000001
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 1.7007e-12,
+              "rstd": 0.72831
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 1.318e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 1.6287e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 8.6547e-13,
+              "rstd": 0.8040600000000001
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 5.4387e-14,
+              "rstd": 1.0
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.04
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    },
+    {
+      "input": "Omitted",
+      "stderr": "Omitted",
+      "stdout": "Omitted",
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 2.2257e-12,
+              "rstd": 0.80916
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 6.3133e-12,
+              "rstd": 0.474
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 1.1668e-12,
+              "rstd": 0.7016100000000001
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 2.0622e-12,
+              "rstd": 0.50787
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 1.625e-12,
+              "rstd": 0.8457399999999999
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 9.8259e-13,
+              "rstd": 0.9493699999999999
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 1.0157e-12,
+              "rstd": 0.8454200000000001
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 3.4525e-12,
+              "rstd": 0.59665
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 3.1713e-12,
+              "rstd": 0.58003
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 2.5028e-12,
+              "rstd": 0.63624
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 1.1682e-12,
+              "rstd": 0.73669
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 2.9867e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 9.8824e-13,
+              "rstd": 0.7813800000000001
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 7.2886e-13,
+              "rstd": 0.5806600000000001
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 1.0917e-12,
+              "rstd": 0.77917
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 2.285e-12,
+              "rstd": 0.54878
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 7.3345e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 6.2398e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 9.1379e-13,
+              "rstd": 0.8044
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 1.829e-12,
+              "rstd": 0.69649
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 7.9304e-13,
+              "rstd": 0.72096
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 1.1672e-12,
+              "rstd": 0.94646
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 3.3667e-12,
+              "rstd": 0.68396
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 1.3535e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 1.968e-12,
+              "rstd": 0.94553
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 1.7668e-12,
+              "rstd": 0.5563199999999999
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 1.0422e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 6.9263e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 3.5839e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 2.8452e-12,
+              "rstd": 0.6860599999999999
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 3.1935e-12,
+              "rstd": 0.70908
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 2.9201e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 2.3526e-12,
+              "rstd": 0.82023
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 2.8377e-13,
+              "rstd": 0.794
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 9.793e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 2.9881e-12,
+              "rstd": 0.69075
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 1.5033e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 7.77e-13,
+              "rstd": 0.72155
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 4.9843e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 1.9018e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 2.2815e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 1.6116e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 6.3255e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 4.9197e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 5.8085e-13,
+              "rstd": 1.0
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.04
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    },
+    {
+      "input": "Omitted",
+      "stderr": "Omitted",
+      "stdout": "Omitted",
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 2.6528e-12,
+              "rstd": 0.5682
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 1.1672e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 2.6387e-12,
+              "rstd": 0.79294
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 6.6082e-12,
+              "rstd": 0.8340099999999999
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 1.3571e-12,
+              "rstd": 0.6469199999999999
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 1.1221e-12,
+              "rstd": 0.45036000000000006
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 1.9346e-12,
+              "rstd": 0.53298
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 2.629e-12,
+              "rstd": 0.72146
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 3.1735e-12,
+              "rstd": 0.67014
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 3.8244e-12,
+              "rstd": 0.62147
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 4.7872e-12,
+              "rstd": 0.73536
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 3.876e-12,
+              "rstd": 0.53069
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 9.2832e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 2.9925e-12,
+              "rstd": 0.52997
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 1.0029e-12,
+              "rstd": 0.74442
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 1.7598e-12,
+              "rstd": 0.6914100000000001
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 8.1405e-13,
+              "rstd": 0.76005
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 2.564e-12,
+              "rstd": 0.46408
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 4.4318e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 1.1606e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 1.0841e-12,
+              "rstd": 0.8866299999999999
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 3.9532e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 1.686e-12,
+              "rstd": 0.7719799999999999
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 1.4931e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 2.4006e-12,
+              "rstd": 0.9333199999999999
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 1.0863e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 3.6699e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 6.5837e-13,
+              "rstd": 0.70577
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 9.4463e-13,
+              "rstd": 0.9864700000000001
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 6.7374e-13,
+              "rstd": 0.70659
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 3.0864e-12,
+              "rstd": 0.7835899999999999
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 1.2831e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 3.3194e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 1.8694e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 9.0074e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 2.5037e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 1.3829e-12,
+              "rstd": 0.7106
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 2.2251e-12,
+              "rstd": 0.7018000000000001
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 2.7981e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 3.0869e-12,
+              "rstd": 0.74009
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 4.073e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 3.3793e-12,
+              "rstd": 0.71379
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 1.7003e-12,
+              "rstd": 0.65973
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 6.1395e-13,
+              "rstd": 1.0
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.07
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    },
+    {
+      "input": "Omitted",
+      "stderr": "Omitted",
+      "stdout": "Omitted",
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 7.8651e-13,
+              "rstd": 0.72181
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 6.2093e-12,
+              "rstd": 0.56738
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 2.5174e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 1.6764e-13,
+              "rstd": 0.70514
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 8.6822e-13,
+              "rstd": 0.9139400000000001
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 2.5225e-12,
+              "rstd": 0.90337
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 1.7736e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 2.0151e-12,
+              "rstd": 0.94108
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 2.175e-12,
+              "rstd": 0.8919
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 2.9825e-12,
+              "rstd": 0.69982
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 2.6938e-12,
+              "rstd": 0.90483
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 9.5675e-13,
+              "rstd": 0.9028100000000001
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 9.6886e-13,
+              "rstd": 0.89241
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 5.4695e-12,
+              "rstd": 0.5736399999999999
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 3.0068e-12,
+              "rstd": 0.92006
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 9.9889e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 2.8378e-12,
+              "rstd": 0.75625
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 5.1675e-12,
+              "rstd": 0.55923
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 2.3488e-12,
+              "rstd": 0.9418300000000001
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 6.82e-13,
+              "rstd": 0.7487999999999999
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 3.2277e-13,
+              "rstd": 0.8089700000000001
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 3.4085e-12,
+              "rstd": 0.9446599999999999
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 3.012e-12,
+              "rstd": 0.91303
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 1.3512e-12,
+              "rstd": 0.73527
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 2.8998e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 5.6055e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 4.2017e-12,
+              "rstd": 0.6948799999999999
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 4.9127e-12,
+              "rstd": 0.71524
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 8.2381e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 3.6234e-12,
+              "rstd": 0.99806
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 4.6491e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 7.7451e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 3.6854e-12,
+              "rstd": 0.77266
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 2.1655e-12,
+              "rstd": 0.7974899999999999
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 1.8159e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 2.7735e-12,
+              "rstd": 0.90619
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 2.7301e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 1.2962e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 2.1785e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 2.5986e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 3.7024e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 1.2989e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 3.2191e-12,
+              "rstd": 0.75307
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.04
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    },
+    {
+      "input": "Omitted",
+      "stderr": "Omitted",
+      "stdout": "Omitted",
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 2.2636e-12,
+              "rstd": 0.58911
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 9.8649e-13,
+              "rstd": 0.76917
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 1.4925e-12,
+              "rstd": 0.67515
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 1.3583e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 2.4975e-12,
+              "rstd": 0.7704900000000001
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 3.8864e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 3.1738e-12,
+              "rstd": 0.56308
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 2.6365e-12,
+              "rstd": 0.65437
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 2.4083e-12,
+              "rstd": 0.77642
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 2.835e-12,
+              "rstd": 0.7335200000000001
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 4.2575e-13,
+              "rstd": 0.7916599999999999
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 1.5714e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 1.1668e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 3.1523e-12,
+              "rstd": 0.6015400000000001
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 4.6984e-13,
+              "rstd": 0.7376900000000001
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 1.2025e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 7.6813e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 1.7338e-12,
+              "rstd": 0.77542
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 1.4838e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 2.7967e-12,
+              "rstd": 0.91129
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 5.4112e-13,
+              "rstd": 0.70285
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 1.2723e-12,
+              "rstd": 0.53089
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 7.9983e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 6.5695e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 3.1831e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 1.158e-12,
+              "rstd": 0.79899
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 2.1123e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 2.2841e-12,
+              "rstd": 0.83036
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 1.2184e-12,
+              "rstd": 0.95661
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 1.107e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 2.4918e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 5.7808e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 4.642e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 1.64e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 3.5477e-12,
+              "rstd": 1.0
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.06
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    },
+    {
+      "input": "Omitted",
+      "stderr": "Omitted",
+      "stdout": "Omitted",
+      "exit_status": {
+        "Available": 0
+      },
+      "dose": {
+        "Available": [
+          [
+            "PSS_Box",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_0.51",
+            {
+              "value": 3.8401e-12,
+              "rstd": 0.5865400000000001
+            }
+          ],
+          [
+            "Messwelt_1.01",
+            {
+              "value": 4.7744e-13,
+              "rstd": 0.77216
+            }
+          ],
+          [
+            "Messwelt_1.51",
+            {
+              "value": 3.9722e-12,
+              "rstd": 0.6093
+            }
+          ],
+          [
+            "Messwelt_2.01",
+            {
+              "value": 4.5104e-12,
+              "rstd": 0.6484399999999999
+            }
+          ],
+          [
+            "Messwelt_2.51",
+            {
+              "value": 3.4994e-12,
+              "rstd": 0.56003
+            }
+          ],
+          [
+            "Messwelt_3.01",
+            {
+              "value": 7.9307e-13,
+              "rstd": 0.96356
+            }
+          ],
+          [
+            "Messwelt_3.51",
+            {
+              "value": 3.8906e-12,
+              "rstd": 0.59116
+            }
+          ],
+          [
+            "Messwelt_4.01",
+            {
+              "value": 1.0119e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_4.51",
+            {
+              "value": 4.1542e-12,
+              "rstd": 0.57599
+            }
+          ],
+          [
+            "Messwelt_5.01",
+            {
+              "value": 2.8145e-12,
+              "rstd": 0.65125
+            }
+          ],
+          [
+            "Messwelt_5.51",
+            {
+              "value": 4.7526e-12,
+              "rstd": 0.42137
+            }
+          ],
+          [
+            "Messwelt_6.01",
+            {
+              "value": 2.821e-13,
+              "rstd": 0.6315
+            }
+          ],
+          [
+            "Messwelt_6.51",
+            {
+              "value": 3.1032e-13,
+              "rstd": 0.59686
+            }
+          ],
+          [
+            "Messwelt_7.01",
+            {
+              "value": 1.8612e-12,
+              "rstd": 0.7367400000000001
+            }
+          ],
+          [
+            "Messwelt_7.51",
+            {
+              "value": 2.7384e-12,
+              "rstd": 0.63508
+            }
+          ],
+          [
+            "Messwelt_8.01",
+            {
+              "value": 4.6918e-12,
+              "rstd": 0.5522699999999999
+            }
+          ],
+          [
+            "Messwelt_8.51",
+            {
+              "value": 8.3593e-13,
+              "rstd": 0.8027500000000001
+            }
+          ],
+          [
+            "Messwelt_9.01",
+            {
+              "value": 6.3994e-12,
+              "rstd": 0.6929900000000001
+            }
+          ],
+          [
+            "Messwelt_9.51",
+            {
+              "value": 3.6062e-13,
+              "rstd": 0.71953
+            }
+          ],
+          [
+            "Messwelt_10.01",
+            {
+              "value": 4.2872e-12,
+              "rstd": 0.55456
+            }
+          ],
+          [
+            "Messwelt_10.51",
+            {
+              "value": 3.237e-12,
+              "rstd": 0.5557500000000001
+            }
+          ],
+          [
+            "Messwelt_11.01",
+            {
+              "value": 3.4615e-12,
+              "rstd": 0.71634
+            }
+          ],
+          [
+            "Messwelt_11.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_12.01",
+            {
+              "value": 3.2585e-12,
+              "rstd": 0.69796
+            }
+          ],
+          [
+            "Messwelt_12.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_13.01",
+            {
+              "value": 1.5697e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_13.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_14.01",
+            {
+              "value": 4.976e-12,
+              "rstd": 0.78399
+            }
+          ],
+          [
+            "Messwelt_14.51",
+            {
+              "value": 1.49e-12,
+              "rstd": 0.70613
+            }
+          ],
+          [
+            "Messwelt_15.01",
+            {
+              "value": 1.7326e-12,
+              "rstd": 0.81577
+            }
+          ],
+          [
+            "Messwelt_15.51",
+            {
+              "value": 7.6516e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_16.51",
+            {
+              "value": 2.6859e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_17.51",
+            {
+              "value": 1.4166e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_18.01",
+            {
+              "value": 2.8723e-12,
+              "rstd": 0.70337
+            }
+          ],
+          [
+            "Messwelt_18.51",
+            {
+              "value": 2.1388e-12,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.01",
+            {
+              "value": 5.3405e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_19.51",
+            {
+              "value": 8.035e-13,
+              "rstd": 0.97652
+            }
+          ],
+          [
+            "Messwelt_20.01",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_20.51",
+            {
+              "value": 3.6986e-12,
+              "rstd": 0.70833
+            }
+          ],
+          [
+            "Messwelt_21.01",
+            {
+              "value": 9.3733e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_21.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_22.01",
+            {
+              "value": 2.5949e-12,
+              "rstd": 0.84572
+            }
+          ],
+          [
+            "Messwelt_22.51",
+            {
+              "value": 0.0,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.01",
+            {
+              "value": 5.4406e-14,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_23.51",
+            {
+              "value": 3.2456e-13,
+              "rstd": 0.8887999999999999
+            }
+          ],
+          [
+            "Messwelt_24.01",
+            {
+              "value": 1.5985e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_24.51",
+            {
+              "value": 4.9981e-13,
+              "rstd": 1.0
+            }
+          ],
+          [
+            "Messwelt_25.01",
+            {
+              "value": 4.7531e-13,
+              "rstd": 1.0
+            }
+          ]
+        ]
+      },
+      "total_cpu_time": {
+        "Available": 0.05
+      },
+      "simulation_finished": {
+        "Available": true
+      }
+    }
+  ],
+  "total_cpu_time": {
+    "Available": 0.42
+  },
+  "simulation_finished": {
+    "Available": true
+  },
+  "dose": {
+    "Available": [
+      [
+        "PSS_Box",
+        {
+          "value": 0.0,
+          "rstd": null
+        }
+      ],
+      [
+        "Messwelt_0.51",
+        {
+          "value": 1.94522625e-12,
+          "rstd": 0.2628028155183232
+        }
+      ],
+      [
+        "Messwelt_1.01",
+        {
+          "value": 2.82120625e-12,
+          "rstd": 0.2677807499034511
+        }
+      ],
+      [
+        "Messwelt_1.51",
+        {
+          "value": 2.21585375e-12,
+          "rstd": 0.2870316810830553
+        }
+      ],
+      [
+        "Messwelt_2.01",
+        {
+          "value": 2.345425e-12,
+          "rstd": 0.3619565828343094
+        }
+      ],
+      [
+        "Messwelt_2.51",
+        {
+          "value": 2.246555e-12,
+          "rstd": 0.2746291794821116
+        }
+      ],
+      [
+        "Messwelt_3.01",
+        {
+          "value": 1.2198624999999998e-12,
+          "rstd": 0.3062715186258027
+        }
+      ],
+      [
+        "Messwelt_3.51",
+        {
+          "value": 2.0650919999999996e-12,
+          "rstd": 0.3315924420911786
+        }
+      ],
+      [
+        "Messwelt_4.01",
+        {
+          "value": 2.6883e-12,
+          "rstd": 0.24799784333079298
+        }
+      ],
+      [
+        "Messwelt_4.51",
+        {
+          "value": 2.7233e-12,
+          "rstd": 0.2352742620920135
+        }
+      ],
+      [
+        "Messwelt_5.01",
+        {
+          "value": 2.4300662500000002e-12,
+          "rstd": 0.2550865714609027
+        }
+      ],
+      [
+        "Messwelt_5.51",
+        {
+          "value": 3.328602499999999e-12,
+          "rstd": 0.2710656423108283
+        }
+      ],
+      [
+        "Messwelt_6.01",
+        {
+          "value": 1.1351925e-12,
+          "rstd": 0.3209435311297644
+        }
+      ],
+      [
+        "Messwelt_6.51",
+        {
+          "value": 9.2916125e-13,
+          "rstd": 0.34215276081338516
+        }
+      ],
+      [
+        "Messwelt_7.01",
+        {
+          "value": 2.590495e-12,
+          "rstd": 0.2595967130709637
+        }
+      ],
+      [
+        "Messwelt_7.51",
+        {
+          "value": 2.1129e-12,
+          "rstd": 0.2832469180827583
+        }
+      ],
+      [
+        "Messwelt_8.01",
+        {
+          "value": 1.868242375e-12,
+          "rstd": 0.2720963165759879
+        }
+      ],
+      [
+        "Messwelt_8.51",
+        {
+          "value": 9.6689625e-13,
+          "rstd": 0.3921704326544208
+        }
+      ],
+      [
+        "Messwelt_9.01",
+        {
+          "value": 2.25545375e-12,
+          "rstd": 0.3151019396765354
+        }
+      ],
+      [
+        "Messwelt_9.51",
+        {
+          "value": 1.594450625e-12,
+          "rstd": 0.46004596549383289
+        }
+      ],
+      [
+        "Messwelt_10.01",
+        {
+          "value": 1.64335125e-12,
+          "rstd": 0.2860507594900964
+        }
+      ],
+      [
+        "Messwelt_10.51",
+        {
+          "value": 1.304801375e-12,
+          "rstd": 0.3015826042005299
+        }
+      ],
+      [
+        "Messwelt_11.01",
+        {
+          "value": 1.4822149999999999e-12,
+          "rstd": 0.4903741148934599
+        }
+      ],
+      [
+        "Messwelt_11.51",
+        {
+          "value": 7.000689999999999e-13,
+          "rstd": 0.4044895437399312
+        }
+      ],
+      [
+        "Messwelt_12.01",
+        {
+          "value": 1.970316375e-12,
+          "rstd": 0.35821208176412536
+        }
+      ],
+      [
+        "Messwelt_12.51",
+        {
+          "value": 1.6634725000000002e-12,
+          "rstd": 0.3835838901272975
+        }
+      ],
+      [
+        "Messwelt_13.01",
+        {
+          "value": 7.049371250000001e-13,
+          "rstd": null
+        }
+      ],
+      [
+        "Messwelt_13.51",
+        {
+          "value": 9.867737499999998e-13,
+          "rstd": 0.3920569350381861
+        }
+      ],
+      [
+        "Messwelt_14.01",
+        {
+          "value": 1.027063125e-12,
+          "rstd": 0.5085385747264798
+        }
+      ],
+      [
+        "Messwelt_14.51",
+        {
+          "value": 1.3759575e-12,
+          "rstd": 0.3205270261686671
+        }
+      ],
+      [
+        "Messwelt_15.01",
+        {
+          "value": 2.3631687499999996e-12,
+          "rstd": 0.36436116216869909
+        }
+      ],
+      [
+        "Messwelt_15.51",
+        {
+          "value": 1.23205325e-12,
+          "rstd": 0.3632010335000702
+        }
+      ],
+      [
+        "Messwelt_16.01",
+        {
+          "value": 1.1132175000000001e-12,
+          "rstd": 0.4995374949219142
+        }
+      ],
+      [
+        "Messwelt_16.51",
+        {
+          "value": 1.791051875e-12,
+          "rstd": 0.4397581630844399
+        }
+      ],
+      [
+        "Messwelt_17.01",
+        {
+          "value": 1.178166375e-12,
+          "rstd": 0.42518567993105368
+        }
+      ],
+      [
+        "Messwelt_17.51",
+        {
+          "value": 1.4828663749999998e-12,
+          "rstd": 0.3428473905927183
+        }
+      ],
+      [
+        "Messwelt_18.01",
+        {
+          "value": 1.23521375e-12,
+          "rstd": 0.4212801175202209
+        }
+      ],
+      [
+        "Messwelt_18.51",
+        {
+          "value": 8.368018750000001e-13,
+          "rstd": 0.44696644884847966
+        }
+      ],
+      [
+        "Messwelt_19.01",
+        {
+          "value": 1.0624811250000002e-12,
+          "rstd": 0.42546408265451998
+        }
+      ],
+      [
+        "Messwelt_19.51",
+        {
+          "value": 1.19182125e-12,
+          "rstd": 0.4067185244892454
+        }
+      ],
+      [
+        "Messwelt_20.01",
+        {
+          "value": 8.060499999999999e-13,
+          "rstd": null
+        }
+      ],
+      [
+        "Messwelt_20.51",
+        {
+          "value": 1.149516625e-12,
+          "rstd": 0.44020005748438237
+        }
+      ],
+      [
+        "Messwelt_21.01",
+        {
+          "value": 1.16902875e-12,
+          "rstd": 0.3712030008942632
+        }
+      ],
+      [
+        "Messwelt_21.51",
+        {
+          "value": 1.70648375e-13,
+          "rstd": 0.5209888271660947
+        }
+      ],
+      [
+        "Messwelt_22.01",
+        {
+          "value": 1.1438475e-12,
+          "rstd": null
+        }
+      ],
+      [
+        "Messwelt_22.51",
+        {
+          "value": 6.06165e-13,
+          "rstd": 0.576458883628383
+        }
+      ],
+      [
+        "Messwelt_23.01",
+        {
+          "value": 8.3767325e-13,
+          "rstd": 0.6823594919082271
+        }
+      ],
+      [
+        "Messwelt_23.51",
+        {
+          "value": 1.0015395e-12,
+          "rstd": 0.42081207465887729
+        }
+      ],
+      [
+        "Messwelt_24.01",
+        {
+          "value": 9.413325e-13,
+          "rstd": 0.5126218732133687
+        }
+      ],
+      [
+        "Messwelt_24.51",
+        {
+          "value": 6.281712500000001e-13,
+          "rstd": 0.50625597765904
+        }
+      ],
+      [
+        "Messwelt_25.01",
+        {
+          "value": 1.743412125e-12,
+          "rstd": 0.42067402556268687
+        }
+      ]
+    ]
+  }
+}

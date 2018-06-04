@@ -46,6 +46,15 @@ fn test_run_umlauts() {
 }
 
 #[test]
+fn test_zero_dose_with_100_uncertainty() {
+    let input_path = asset_path().join("nan.egsinp");
+    let report = run_and_load(&input_path, &[]);
+    // TODO check that output contains 100% uncertainty
+
+
+}
+
+#[test]
 fn test_run_multiple_geometries() {
     let input_path = asset_path().join("three_calc_geos.egsinp");
     let sinput_path = input_path.to_str().unwrap();

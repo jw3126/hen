@@ -504,8 +504,15 @@ fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uf64)>>
     }
     let wt = Uf64::from_value_var(1. / (nruns as f64), 0.);
     // normalize
+    let mask_nan = |dose:Uf64| {
+        if dose.rstd().is_finite() {
+            dose
+        } else {
+            Uf64::from_value_rstd(dose.value(), 1.0)
+        }
+    };
     ret = ret.iter()
-        .map(|&(ref label, ref dose)| (label.to_string(), *dose * wt))
+        .map(|&(ref label, ref dose)| (label.to_string(), mask_nan(*dose * wt)))
         .collect();
     Ok(ret)
 }

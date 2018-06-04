@@ -1,0 +1,56 @@
+:start geometry definition:
+    :start geometry:
+        library = egs_box
+        box size = 100 100 100
+        name = geo
+        :start media input:
+            media = H2O521ICRU
+        :stop media input:
+    :stop geometry:
+
+    simulation geometry = geo
+
+:stop geometry definition:
+:start scoring options:
+  calculation type = dose
+    :start calculation geometry:
+        geometry name = geo
+        cavity regions = 0
+        cavity mass = 1
+        cavity geometry = cavity
+        enhance regions = -1
+        enhancement = 512
+    :stop calculation geometry:
+:stop scoring options:
+
+:start source definition:
+    :start source:
+        library     = egs_point_source
+        name        = my_source
+        position    = 0 0 0
+        :start spectrum:
+            type    = monoenergetic
+            energy  = 4
+        :stop spectrum:
+        charge      = 0
+    :stop source:
+
+    simulation source = my_source
+
+:stop source definition:
+:start MC transport parameter:
+    Global ECUT = 10.
+    Global PCUT = 3.
+:stop MC transport parameter:
+
+:start run control:
+    ncase = 10000000
+    nbatch = 10
+    max cpu hours allowed = 0.0001
+    statistical accuracy sought = 1
+:stop run control:
+
+:start rng definition:
+    type = ranmar
+    initial seeds = 1802 1000
+:stop rng definition:

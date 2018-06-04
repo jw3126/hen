@@ -69,8 +69,9 @@ fn parse_geometry_dose(line: &str) -> Result<(String, Uf64)> {
         .parse::<f64>()
         .map_err(|err| format!("Cannot parse f64 from {:?} {:?}", srstd, err))?;
     let rstd = rstd_percent / 100.;
+    assert!(rstd.is_finite());
     let score = Uf64::from_value_rstd(value, rstd);
-    return Ok((name, score));
+    Ok((name, score))
 }
 
 pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutput> {
