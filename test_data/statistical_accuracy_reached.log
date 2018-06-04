@@ -1,0 +1,226 @@
+In EGS_Application::initSimulation()
+================================================================================
+EGSnrc version 4 for linux64                           Mon Jun  4 13:04:49 2018
+================================================================================
+configuration...linux64
+user code.......egs_chamber
+pegs file.......521icru on HEN_HOUSE
+using host......ptwlinuxvm
+input file......c8869cb4660545356de9b3740985068ff8595659016d601024eb99678d7349c0
+output file(s)..c8869cb4660545356de9b3740985068ff8595659016d601024eb99678d7349c0
+================================================================================
+
+               *************************************************
+               *                                               *
+               *               egs_chamber CSE)                *
+               *                                               *
+               *************************************************
+
+This is EGS_ChamberApplication Revision: 1.21  based on
+      EGS_AdvancedApplication Revision: 1.39 
+
+In initCrossSections(): spin effects = 1
+Property Photon cross-sections output: 0
+Property Photonuclear attenuation: 0
+Property Bound Compton scattering: 3
+Property Radiative Compton corrections: 0
+Property Rayleigh scattering: 0
+Property Atomic relaxations: 1
+Property Photoelectron angular sampling: 1
+Property Spin effects: 1
+Property Triplet production: 0
+Property Brems cross sections: 0
+Property Brems angular sampling: 1
+Property Pair cross sections: 0
+Property Pair angular sampling: 1
+Property Electron-step algorithm: 0
+Property Boundary crossing algorithm: 0
+ ===> Photonuclear flag:   0
+ Rayleigh data available for medium  1 in PEGS4 data set.
+
+(Re)-initializing photon cross section data
+Using data files from the series xcom
+
+Photon cross sections: xcom Compton cross sections: default
+Using Compton cross sections from /home/ptwlinuxvm/EGSnrc/HEN_HOUSE/data/compton_sigma.data
+Working on medium   1 ... OK
+  Reading screened Rutherford MS data ...............  done 
+
+
+Reading spin data base from /home/ptwlinuxvm/EGSnrc/HEN_HOUSE/data/spinms.data
+EGSnrc spin data, version 2.0   
+Data generated on a machine with 1234 endianess
+The endianess of this CPU is 1234
+Ranges:      1.00   100.00  0.30054  1.00000
+
+
+  medium    1 .....................  done
+  
+  Medium            1  sige =    6.3784170227787529        6.1807995067678911       monotone =  F F
+  
+  Initializing tmxs for estepe =   0.25000000000000000       and ximax =   0.50000000000000000     
+  
+ Output from subroutine EDGSET:
+ ==============================
+ Atomic relaxations requested! 
+
+
+ Reading photo-absorption data ..... Done
+
+ Reading relaxation data ..... Done
+
+ Reading photo cross section data ..... Done
+
+
+Reading EADL relaxation data ......
+-> Element Z =   1 has  1 shells
+-> Element Z =   8 has  4 shells
+...... Done.
+
+ Bound Compton scattering requested, reading data ......  Done
+
+ Initializing Bound Compton scattering ......
+ Medium   1 has   5 shells: 
+  1   1  1  0.20000 0.116E+03     0.014
+  2  17  1  0.20000 0.155E+02     0.543
+  3  18  2  0.20000 0.793E+02     0.024
+  4  19  3  0.20000 0.479E+02     0.014
+  5  20  4  0.20000 0.479E+02     0.014
+...... Done.
+
+  EGSnrc SUCCESSFULLY 'HATCHED' FOR ONE MEDIUM.
+
+
+The following media are defined:
+================================
+
+  0  H2O521ICRU               AE= 0.5210 AP= 0.0100 0
+
+
+Transport parameter and cross section options:
+==============================================
+Photon cross sections                             xcom            
+Compton cross sections                            default         
+Global Pcut                                       3
+Pair cross sections                               BH
+Pair angular sampling                             Simple
+Triplet production                                Off
+Bound Compton scattering                          norej
+Radiative Compton corrections                     Off
+Rayleigh scattering                               Off
+Atomic relaxations                                On
+Photoelectron angular sampling                    On
+Photonuclear attenuation                          Off
+Photonuclear cross sections                       default         
+
+Global Ecut                                       10
+Brems cross sections                              BH
+Brems angular sampling                            KM
+Spin effects                                      On
+Electron Impact Ionization                        Off             
+Global Smax                                       1e+10
+ESTEPE                                            0.25
+Ximax                                             0.5
+Boundary crossing algorithm                       Exact
+Skin depth for BCA                                3
+Electron-step algorithm                           EGSnrc
+==============================================
+
+initScoring: missing/wrong 'enhance regions' input
+initScoring: missing/wrong 'enhancement' input
+initScoring: no 'cavity geometry' named cavity --> input ignored
+
+=========================positioning uncertainty=========================
+Isocenter positioning uncertainty option is set OFF.
+
+Cavity positioning uncertainty option is set OFF.
+
+Number of uncorrelated estimators is 0 among 1 geometries.
+Number of correlated estimators is 0 among 1 geometries.
+
+=========================================================================EGS_ObjectFactory::createObjects(): the input is not of type ausgab object definition and also does not have items of this type
+
+
+======================== geometry =====================
+ type = EGS_Box
+ name = geo
+ number of regions = 1
+ box size = 100 100 100
+=======================================================
+
+
+The simulation uses the following source:
+=========================================
+ Point source with monoenergetic 4 MeV, photons
+
+
+Random number generator:
+============================================
+  type                = ranmar
+  high resolution     = no
+  initial seeds       = 42 1
+  numbers used so far = 0
+
+
+Variance reduction
+====================================================
+Photon splitting = off
+Range rejection = off
+
+
+photon cross-section enhancement = Off
+
+
+region by region ECUT = Off
+
+=============================================
+
+
+Starting simulation on Mon Jun  4 13:04:49 2018
+
+    Fresh simulation of 1250000 histories
+
+
+
+Running 1250000 histories
+
+  Batch             CPU time        Result   Uncertainty(%)
+==========================================================
+      1                0.21     5.3407e-10           0.12
+
+
+*** Reached the requested uncertainty of 1%
+    => terminating simulation.
+
+  finishBatch() loop termination
+
+
+Finished simulation
+
+Total cpu time for this run:            0.21 (sec.) 0.0001(hours)
+Histories per hour:                     2.14286e+09   
+Number of random numbers used:          1830099       
+Number of electron CH steps:            0             
+Number of all electron steps:           0             
+
+
+ last case = 125000 fluence = 125000
+
+Geometry                        Cavity dose      
+-----------------------------------------------
+geo                       5.3408e-10 +/- 0.124  % 
+
+
+
+
+================================================================================
+Finished simulation
+
+  Elapsed time:                    0.3 s (  0.000 h)
+  CPU time:                        0.3 s (  0.000 h)
+  Ratio:                          1.017
+
+
+End of run                                             Mon Jun  4 13:04:49 2018
+================================================================================
+finishSimulation(egs_chamber) 0

@@ -3,6 +3,8 @@ use regex::Regex;
 use uncertain::UncertainF64;
 use simulation::SingSimParsedOutput;
 use util::Result;
+use util::asset_path;
+use std::path::Path;
 
 fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
     let re = Regex::new(r"^(.*[^\.])\.\.\.*(.*)$").unwrap();
@@ -97,15 +99,18 @@ fn test_parse_geometry_dose() {
     );
 }
 
-#[test]
-fn test_parse_loop_simulation_output() {
+fn parse_simulation_output_from_file(path: &Path) -> SingSimParsedOutput {
     use std::fs::File;
     use std::io::BufReader;
-    use util::asset_path;
-    let path = asset_path().join("Wasservoxel.log");
     let f = File::open(path).unwrap();
     let mut r = BufReader::new(f);
     let out = parse_simulation_output(&mut r).unwrap();
+    out
+}
+#[test]
+fn test_parse_loop_simulation_output() {
+    let path = asset_path().join("Wasservoxel.log");
+    let out = parse_simulation_output_from_file(&path);
     assert_eq!(out.total_cpu_time.unwrap(), 1997.04);
     assert_eq!(out.simulation_finished.unwrap(), true);
     let dose = out.dose.unwrap();
@@ -125,6 +130,25 @@ fn test_parse_loop_simulation_output() {
     assert_eq!(dose[1], dose1);
     assert_eq!(dose[81], dose81);
     assert_eq!(dose.len(), 82);
+}
+
+#[test]
+fn test_parse_timeout_simulation_output() {
+    let path1 = asset_path().join("timeout.log");
+    let path2 = asset_path().join("statistical_accuracy_reached.log");
+    for path in [path1, path2].iter() {
+        let out = parse_simulation_output_from_file(&path);
+        assert!(out.simulation_finished.unwrap());
+        let dose = out.dose.unwrap();
+        assert_eq!(dose.len(), 1);
+        assert_eq!(
+            dose[0],
+            (
+                "geo".to_string(),
+                UncertainF64::from_value_rstd(5.3408e-10, 0.124e-2)
+            )
+        );
+    }
 }
 
 pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutput> {
