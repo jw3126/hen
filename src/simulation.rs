@@ -9,7 +9,7 @@ use tokenizer::TokenStream;
 use sha3;
 use sha3::Digest;
 use std;
-use uncertain::UncertainF64;
+use uncertain::Uf64;
 use output_parser;
 use std::fmt;
 use util::{debug_string, Result};
@@ -120,7 +120,7 @@ pub struct SingSimFinished {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimParsedOutput {
-    pub dose: Result<Vec<(String, UncertainF64)>>,
+    pub dose: Result<Vec<(String, Uf64)>>,
     pub total_cpu_time: Result<f64>,
     pub simulation_finished: Result<bool>,
 }
@@ -131,7 +131,7 @@ pub struct SingSimReport {
     pub stderr: Omittable<String>,
     pub stdout: Omittable<String>,
     pub exit_status: Omittable<i32>,
-    pub dose: Omittable<Vec<(String, UncertainF64)>>,
+    pub dose: Omittable<Vec<(String, Uf64)>>,
     pub total_cpu_time: Omittable<f64>,
     pub simulation_finished: Omittable<bool>,
 }
@@ -149,7 +149,7 @@ pub struct ParSimReport {
 
     pub total_cpu_time: Omittable<f64>,
     pub simulation_finished: Omittable<bool>,
-    pub dose: Omittable<Vec<(String, UncertainF64)>>,
+    pub dose: Omittable<Vec<(String, Uf64)>>,
 }
 
 impl ParSimInput {
@@ -464,12 +464,12 @@ fn compute_simulation_finished(single_runs: &[SingSimReport]) -> Omittable<bool>
         })
 }
 
-fn compute_dose(single_runs: &[SingSimReport]) -> Omittable<Vec<(String, UncertainF64)>> {
+fn compute_dose(single_runs: &[SingSimReport]) -> Omittable<Vec<(String, Uf64)>> {
     Omittable::from_result(compute_dose_result(&single_runs))
 }
 
-fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, UncertainF64)>> {
-    let doses1: Vec<Result<Vec<(String, UncertainF64)>>> = reports
+fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uf64)>> {
+    let doses1: Vec<Result<Vec<(String, Uf64)>>> = reports
         .iter()
         .map(|o| o.dose.clone().into_result())
         .collect();
@@ -502,7 +502,7 @@ fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uncerta
             ret[i_reg].1 = d_new;
         }
     }
-    let wt = UncertainF64::from_value_var(1. / (nruns as f64), 0.);
+    let wt = Uf64::from_value_var(1. / (nruns as f64), 0.);
     // normalize
     ret = ret.iter()
         .map(|&(ref label, ref dose)| (label.to_string(), *dose * wt))
@@ -596,7 +596,7 @@ impl ParSimReport {
     }
 
     pub fn compute_efficiency(&self) -> Omittable<f64> {
-        fn inner(doses: Vec<(String, UncertainF64)>, t: f64) -> f64 {
+        fn inner(doses: Vec<(String, Uf64)>, t: f64) -> f64 {
             let mut ret = 0.;
             let n = doses.len();
             for (ref _label, ref score) in doses {
@@ -688,7 +688,7 @@ impl fmt::Display for SingSimInput {
 mod tests {
     use super::*;
     use util::{asset_path, load};
-    use uncertain::UncertainF64;
+    use uncertain::Uf64;
 
     #[test]
     fn test_report_par_sim() {
@@ -697,15 +697,15 @@ mod tests {
         let report: ParSimReport = raw.report();
         // println!("{}", report);
 
-        let dose1 = UncertainF64::from_value_rstd(1.2027e-14, 6.940 / 100.);
-        let dose2 = UncertainF64::from_value_rstd(1.1735e-14, 6.850 / 100.);
-        let dose3 = UncertainF64::from_value_rstd(1.3713e-14, 7.010 / 100.);
-        let dose4 = UncertainF64::from_value_rstd(1.3646e-14, 6.552 / 100.);
-        let dose5 = UncertainF64::from_value_rstd(1.2904e-14, 6.927 / 100.);
-        let dose6 = UncertainF64::from_value_rstd(1.2592e-14, 7.217 / 100.);
-        let dose7 = UncertainF64::from_value_rstd(1.1982e-14, 6.917 / 100.);
-        let dose8 = UncertainF64::from_value_rstd(1.2596e-14, 7.158 / 100.);
-        let dose_combined = UncertainF64::from_value_var(1. / 8., 0.)
+        let dose1 = Uf64::from_value_rstd(1.2027e-14, 6.940 / 100.);
+        let dose2 = Uf64::from_value_rstd(1.1735e-14, 6.850 / 100.);
+        let dose3 = Uf64::from_value_rstd(1.3713e-14, 7.010 / 100.);
+        let dose4 = Uf64::from_value_rstd(1.3646e-14, 6.552 / 100.);
+        let dose5 = Uf64::from_value_rstd(1.2904e-14, 6.927 / 100.);
+        let dose6 = Uf64::from_value_rstd(1.2592e-14, 7.217 / 100.);
+        let dose7 = Uf64::from_value_rstd(1.1982e-14, 6.917 / 100.);
+        let dose8 = Uf64::from_value_rstd(1.2596e-14, 7.158 / 100.);
+        let dose_combined = Uf64::from_value_var(1. / 8., 0.)
             * (dose1 + dose2 + dose3 + dose4 + dose5 + dose6 + dose7 + dose8);
 
         let dose_reported = report.dose.into_result().unwrap().first().unwrap().1;

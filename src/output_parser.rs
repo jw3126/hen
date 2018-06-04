@@ -1,6 +1,6 @@
 use std::io::BufRead;
 use regex::Regex;
-use uncertain::UncertainF64;
+use uncertain::Uf64;
 use simulation::SingSimParsedOutput;
 use util::Result;
 use std::path::Path;
@@ -45,7 +45,7 @@ fn parse_total_cpu_time(line: &str) -> Result<f64> {
     return Ok(ret);
 }
 
-fn parse_geometry_dose(line: &str) -> Result<(String, UncertainF64)> {
+fn parse_geometry_dose(line: &str) -> Result<(String, Uf64)> {
     let re = Regex::new(r"^\s*(.*)\s\s*(.*) \+/\- (.*)%").unwrap();
     let caps = re.captures(&line)
         .ok_or(format!("Cannot match {:?} on {:?}.", re, line))?;
@@ -69,7 +69,7 @@ fn parse_geometry_dose(line: &str) -> Result<(String, UncertainF64)> {
         .parse::<f64>()
         .map_err(|err| format!("Cannot parse f64 from {:?} {:?}", srstd, err))?;
     let rstd = rstd_percent / 100.;
-    let score = UncertainF64::from_value_rstd(value, rstd);
+    let score = Uf64::from_value_rstd(value, rstd);
     return Ok((name, score));
 }
 
@@ -148,7 +148,7 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutp
 mod tests {
     use super::*;
     use util::asset_path;
-    use uncertain::UncertainF64;
+    use uncertain::Uf64;
     fn parse_simulation_output_from_file(path: &Path) -> SingSimParsedOutput {
         use std::fs::File;
         use std::io::BufReader;
@@ -172,11 +172,11 @@ mod tests {
         let line = "Block_                    0.0000e+00 +/- 100.000% \n";
         assert_eq!(
             parse_geometry_dose(&line),
-            Ok(("Block_".to_string(), UncertainF64::from_value_rstd(0., 1.)))
+            Ok(("Block_".to_string(), Uf64::from_value_rstd(0., 1.)))
         );
 
         let line = "Block_                    2.1867e-16 +/- 54.499 % \n";
-        let score = UncertainF64::from_value_rstd(0.00000000000000021867, 0.54499);
+        let score = Uf64::from_value_rstd(0.00000000000000021867, 0.54499);
         assert_eq!(
             parse_geometry_dose(&line),
             Ok(("Block_".to_string(), score))
@@ -190,17 +190,14 @@ mod tests {
         assert_eq!(out.total_cpu_time.unwrap(), 1997.04);
         assert_eq!(out.simulation_finished.unwrap(), true);
         let dose = out.dose.unwrap();
-        let dose0 = (
-            "PSS_Box".to_string(),
-            UncertainF64::from_value_rstd(0.0, 1.0),
-        );
+        let dose0 = ("PSS_Box".to_string(), Uf64::from_value_rstd(0.0, 1.0));
         let dose1 = (
             "Messwelt_0".to_string(),
-            UncertainF64::from_value_rstd(5.6425e-13, 0.955e-2),
+            Uf64::from_value_rstd(5.6425e-13, 0.955e-2),
         );
         let dose81 = (
             "Messwelt_4".to_string(),
-            UncertainF64::from_value_rstd(2.1412e-12, 1.359e-2),
+            Uf64::from_value_rstd(2.1412e-12, 1.359e-2),
         );
         assert_eq!(dose[0], dose0);
         assert_eq!(dose[1], dose1);
@@ -221,7 +218,7 @@ mod tests {
                 dose[0],
                 (
                     "geo".to_string(),
-                    UncertainF64::from_value_rstd(5.3408e-10, 0.124e-2)
+                    Uf64::from_value_rstd(5.3408e-10, 0.124e-2)
                 )
             );
         }

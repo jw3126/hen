@@ -6,7 +6,7 @@ use rand;
 use rand::Rng;
 use std::fs;
 use tempfile::tempdir;
-use uncertain::UncertainF64;
+use uncertain::Uf64;
 
 fn randstring() -> String {
     let ret: String = rand::thread_rng().gen_ascii_chars().take(10).collect();
@@ -26,7 +26,7 @@ fn run_and_load(input_path: &Path, extra_args: &[&str]) -> ParSimReport {
     r
 }
 
-fn assert_close_doses(dose1: Vec<(String, UncertainF64)>, dose2: Vec<(String, UncertainF64)>) {
+fn assert_close_doses(dose1: Vec<(String, Uf64)>, dose2: Vec<(String, Uf64)>) {
     if dose1.len() != dose2.len() {
         panic!("Vectors of different length");
     }
