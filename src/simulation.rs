@@ -118,7 +118,7 @@ pub struct SingSimFinished {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Omitable<T> {
+pub enum Omittable<T> {
     Omitted,
     Fail(String),
     Available(T),
@@ -133,13 +133,13 @@ pub struct SingSimParsedOutput {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimReport {
-    pub input: Omitable<SingSimInput>,
-    pub stderr: Omitable<String>,
-    pub stdout: Omitable<String>,
-    pub exit_status: Omitable<i32>,
-    pub dose: Omitable<Vec<(String, UncertainF64)>>,
-    pub total_cpu_time: Omitable<f64>,
-    pub simulation_finished: Omitable<bool>,
+    pub input: Omittable<SingSimInput>,
+    pub stderr: Omittable<String>,
+    pub stdout: Omittable<String>,
+    pub exit_status: Omittable<i32>,
+    pub dose: Omittable<Vec<(String, UncertainF64)>>,
+    pub total_cpu_time: Omittable<f64>,
+    pub simulation_finished: Omittable<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -153,9 +153,9 @@ pub struct ParSimReport {
     pub input: ParSimInput,
     pub single_runs: Vec<SingSimReport>,
 
-    pub total_cpu_time: Omitable<f64>,
-    pub simulation_finished: Omitable<bool>,
-    pub dose: Omitable<Vec<(String, UncertainF64)>>,
+    pub total_cpu_time: Omittable<f64>,
+    pub simulation_finished: Omittable<bool>,
+    pub dose: Omittable<Vec<(String, UncertainF64)>>,
 }
 
 impl ParSimInput {
@@ -340,51 +340,51 @@ impl SingSimInput {
     }
 }
 
-impl<T> Omitable<T> {
-    pub fn from_result(r: Result<T>) -> Omitable<T> {
+impl<T> Omittable<T> {
+    pub fn from_result(r: Result<T>) -> Omittable<T> {
         match r {
-            Ok(value) => Omitable::Available(value),
-            Err(s) => Omitable::Fail(s),
+            Ok(value) => Omittable::Available(value),
+            Err(s) => Omittable::Fail(s),
         }
     }
 
     pub fn is_available(&self) -> bool {
         match self {
-            &Omitable::Available(_) => true,
-            _ => false
+            &Omittable::Available(_) => true,
+            _ => false,
         }
     }
 
     pub fn into_result(self) -> Result<T> {
         match self {
-            Omitable::Fail(s) => Err(s),
-            Omitable::Omitted => Err("Omitted".to_string()),
-            Omitable::Available(t) => Ok(t),
+            Omittable::Fail(s) => Err(s),
+            Omittable::Omitted => Err("Omitted".to_string()),
+            Omittable::Available(t) => Ok(t),
         }
     }
 
     #[allow(dead_code)]
-    pub fn map<U, F: Fn(T) -> U>(self, f: F) -> Omitable<U> {
+    pub fn map<U, F: Fn(T) -> U>(self, f: F) -> Omittable<U> {
         match self {
-            Omitable::Available(value) => Omitable::Available(f(value)),
-            Omitable::Fail(s) => Omitable::Fail(s.clone()),
-            Omitable::Omitted => Omitable::Omitted,
+            Omittable::Available(value) => Omittable::Available(f(value)),
+            Omittable::Fail(s) => Omittable::Fail(s.clone()),
+            Omittable::Omitted => Omittable::Omitted,
         }
     }
 
-    pub fn map2<S, U, F: Fn(S, T) -> U>(f: F, s: Omitable<S>, t: Omitable<T>) -> Omitable<U> {
+    pub fn map2<S, U, F: Fn(S, T) -> U>(f: F, s: Omittable<S>, t: Omittable<T>) -> Omittable<U> {
         match s {
-            Omitable::Fail(msg) => Omitable::Fail(msg),
+            Omittable::Fail(msg) => Omittable::Fail(msg),
 
-            Omitable::Omitted => match t {
-                Omitable::Fail(msg) => Omitable::Fail(msg),
-                _ => Omitable::Omitted,
+            Omittable::Omitted => match t {
+                Omittable::Fail(msg) => Omittable::Fail(msg),
+                _ => Omittable::Omitted,
             },
 
-            Omitable::Available(s_val) => match t {
-                Omitable::Available(t_val) => Omitable::Available(f(s_val, t_val)),
-                Omitable::Omitted => Omitable::Omitted,
-                Omitable::Fail(msg) => Omitable::Fail(msg),
+            Omittable::Available(s_val) => match t {
+                Omittable::Available(t_val) => Omittable::Available(f(s_val, t_val)),
+                Omittable::Omitted => Omittable::Omitted,
+                Omittable::Fail(msg) => Omittable::Fail(msg),
             },
         }
     }
@@ -406,21 +406,21 @@ impl SingSimFinished {
 
     pub fn report(&self) -> SingSimReport {
         let out = self.parse_output();
-        let exit_status = Omitable::Available(self.exit_status);
-        let dose = Omitable::from_result(out.dose);
-        let total_cpu_time = Omitable::from_result(out.total_cpu_time);
-        let simulation_finished = Omitable::from_result(out.simulation_finished);
+        let exit_status = Omittable::Available(self.exit_status);
+        let dose = Omittable::from_result(out.dose);
+        let total_cpu_time = Omittable::from_result(out.total_cpu_time);
+        let simulation_finished = Omittable::from_result(out.simulation_finished);
         let stderr = match simulation_finished {
-            Omitable::Available(true) => Omitable::Omitted,
-            _ => Omitable::Available(self.stderr.clone()),
+            Omittable::Available(true) => Omittable::Omitted,
+            _ => Omittable::Available(self.stderr.clone()),
         };
         let stdout = match simulation_finished {
-            Omitable::Available(true) => Omitable::Omitted,
-            _ => Omitable::Available(self.stdout.clone()),
+            Omittable::Available(true) => Omittable::Omitted,
+            _ => Omittable::Available(self.stdout.clone()),
         };
         let input = match simulation_finished {
-            Omitable::Available(true) => Omitable::Omitted,
-            _ => Omitable::Available(self.input.clone()),
+            Omittable::Available(true) => Omittable::Omitted,
+            _ => Omittable::Available(self.input.clone()),
         };
         SingSimReport {
             input,
@@ -436,13 +436,13 @@ impl SingSimFinished {
     // TODO this is not dry
     pub fn report_full(&self) -> SingSimReport {
         let out = self.parse_output();
-        let exit_status = Omitable::Available(self.exit_status);
-        let dose = Omitable::from_result(out.dose);
-        let total_cpu_time = Omitable::from_result(out.total_cpu_time);
-        let simulation_finished = Omitable::from_result(out.simulation_finished);
-        let stdout = Omitable::Available(self.stdout.clone());
-        let stderr = Omitable::Available(self.stderr.clone());
-        let input = Omitable::Available(self.input.clone());
+        let exit_status = Omittable::Available(self.exit_status);
+        let dose = Omittable::from_result(out.dose);
+        let total_cpu_time = Omittable::from_result(out.total_cpu_time);
+        let simulation_finished = Omittable::from_result(out.simulation_finished);
+        let stdout = Omittable::Available(self.stdout.clone());
+        let stderr = Omittable::Available(self.stderr.clone());
+        let input = Omittable::Available(self.input.clone());
         SingSimReport {
             input,
             stderr,
@@ -472,9 +472,9 @@ impl ParSimFinished {
         single_runs[0] = self.outputs[0].report_full();
 
         let input = self.input.clone();
-        let total_cpu_time = Omitable::Omitted;
-        let simulation_finished = Omitable::Omitted;
-        let dose = Omitable::Omitted;
+        let total_cpu_time = Omittable::Omitted;
+        let simulation_finished = Omittable::Omitted;
+        let dose = Omittable::Omitted;
         let ret = ParSimReport {
             input,
             single_runs,
@@ -487,26 +487,26 @@ impl ParSimFinished {
     }
 }
 
-fn compute_total_cpu_time(single_runs: &[SingSimReport]) -> Omitable<f64> {
+fn compute_total_cpu_time(single_runs: &[SingSimReport]) -> Omittable<f64> {
     single_runs
         .iter()
         .map(|o| o.total_cpu_time.clone())
-        .fold(Omitable::Available(0.), |t1, t2| {
-            Omitable::map2(|x, y| x + y, t1, t2)
+        .fold(Omittable::Available(0.), |t1, t2| {
+            Omittable::map2(|x, y| x + y, t1, t2)
         })
 }
 
-fn compute_simulation_finished(single_runs: &[SingSimReport]) -> Omitable<bool> {
+fn compute_simulation_finished(single_runs: &[SingSimReport]) -> Omittable<bool> {
     single_runs
         .iter()
         .map(|o| o.simulation_finished.clone())
-        .fold(Omitable::Available(true), |t1, t2| {
-            Omitable::map2(|x, y| x & y, t1, t2)
+        .fold(Omittable::Available(true), |t1, t2| {
+            Omittable::map2(|x, y| x & y, t1, t2)
         })
 }
 
-fn compute_dose(single_runs: &[SingSimReport]) -> Omitable<Vec<(String, UncertainF64)>> {
-    Omitable::from_result(compute_dose_result(&single_runs))
+fn compute_dose(single_runs: &[SingSimReport]) -> Omittable<Vec<(String, UncertainF64)>> {
+    Omittable::from_result(compute_dose_result(&single_runs))
 }
 
 fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, UncertainF64)>> {
@@ -584,9 +584,9 @@ impl ParSimReport {
         }
         let input = ParSimInput::combine(&inputs)?;
 
-        let dose = Omitable::Omitted;
-        let total_cpu_time = Omitable::Omitted;
-        let simulation_finished = Omitable::Omitted;
+        let dose = Omittable::Omitted;
+        let total_cpu_time = Omittable::Omitted;
+        let simulation_finished = Omittable::Omitted;
         let ret = ParSimReport {
             input,
             single_runs,
@@ -636,7 +636,7 @@ impl ParSimReport {
         self.string_input()
     }
 
-    pub fn compute_efficiency(&self) -> Omitable<f64> {
+    pub fn compute_efficiency(&self) -> Omittable<f64> {
         fn inner(doses: Vec<(String, UncertainF64)>, t: f64) -> f64 {
             let mut ret = 0.;
             let n = doses.len();
@@ -646,7 +646,7 @@ impl ParSimReport {
             }
             ret / n as f64
         };
-        Omitable::map2(inner, self.dose.clone(), self.total_cpu_time.clone())
+        Omittable::map2(inner, self.dose.clone(), self.total_cpu_time.clone())
     }
 
     pub fn to_string_output(&self) -> String {
@@ -665,22 +665,22 @@ impl ParSimReport {
     fn string_dose(&self) -> String {
         let mut ret = String::new();
         match self.dose {
-            Omitable::Available(ref v) => for &(ref name, score) in v {
+            Omittable::Available(ref v) => for &(ref name, score) in v {
                 let value = score.value();
                 let pstd = score.rstd() * 100.;
                 ret.push_str(&format!("{}: {} +- {}%\n", name, value, pstd));
             },
-            Omitable::Omitted => {}
-            Omitable::Fail(ref s) => ret.push_str(&format!("{}", s)),
+            Omittable::Omitted => {}
+            Omittable::Fail(ref s) => ret.push_str(&format!("{}", s)),
         };
         ret
     }
 
-    fn string_key_omittable<T: fmt::Display>(key: &str, val: &Omitable<T>) -> String {
+    fn string_key_omittable<T: fmt::Display>(key: &str, val: &Omittable<T>) -> String {
         match val {
-            &Omitable::Available(ref t) => format!("{}: {}", key, t),
-            &Omitable::Omitted => "".to_string(),
-            &Omitable::Fail(ref msg) => format!("{}: {}", key, msg),
+            &Omittable::Available(ref t) => format!("{}: {}", key, t),
+            &Omittable::Omitted => "".to_string(),
+            &Omittable::Fail(ref msg) => format!("{}: {}", key, msg),
         }
     }
 
@@ -707,15 +707,15 @@ impl fmt::Display for ParSimReport {
     }
 }
 
-impl<T> fmt::Display for Omitable<T>
+impl<T> fmt::Display for Omittable<T>
 where
     T: fmt::Display,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &Omitable::Omitted => writeln!(f, ""),
-            &Omitable::Fail(ref msg) => writeln!(f, "{}", msg),
-            &Omitable::Available(ref x) => writeln!(f, "{}", x),
+            &Omittable::Omitted => writeln!(f, ""),
+            &Omittable::Fail(ref msg) => writeln!(f, "{}", msg),
+            &Omittable::Available(ref x) => writeln!(f, "{}", x),
         }
     }
 }
