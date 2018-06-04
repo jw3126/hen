@@ -3,7 +3,6 @@ use regex::Regex;
 use uncertain::UncertainF64;
 use simulation::SingSimParsedOutput;
 use util::Result;
-use util::asset_path;
 use std::path::Path;
 
 fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
@@ -14,15 +13,6 @@ fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
     let key = cap_key.as_str().to_string();
     let val = cap_val.as_str().to_string();
     return Some((key, val));
-}
-
-#[test]
-fn test_parse_dot_separated_key_value() {
-    let s = "configuration...linux64";
-    assert_eq!(
-        parse_dot_separated_key_value(s),
-        Some(("configuration".to_string(), "linux64".to_string()))
-    );
 }
 
 fn read_line_until(reader: &mut BufRead, re: &Regex) -> Option<String> {
@@ -81,74 +71,6 @@ fn parse_geometry_dose(line: &str) -> Result<(String, UncertainF64)> {
     let rstd = rstd_percent / 100.;
     let score = UncertainF64::from_value_rstd(value, rstd);
     return Ok((name, score));
-}
-
-#[test]
-fn test_parse_geometry_dose() {
-    let line = "Block_                    0.0000e+00 +/- 100.000% \n";
-    assert_eq!(
-        parse_geometry_dose(&line),
-        Ok(("Block_".to_string(), UncertainF64::from_value_rstd(0., 1.)))
-    );
-
-    let line = "Block_                    2.1867e-16 +/- 54.499 % \n";
-    let score = UncertainF64::from_value_rstd(0.00000000000000021867, 0.54499);
-    assert_eq!(
-        parse_geometry_dose(&line),
-        Ok(("Block_".to_string(), score))
-    );
-}
-
-fn parse_simulation_output_from_file(path: &Path) -> SingSimParsedOutput {
-    use std::fs::File;
-    use std::io::BufReader;
-    let f = File::open(path).unwrap();
-    let mut r = BufReader::new(f);
-    let out = parse_simulation_output(&mut r).unwrap();
-    out
-}
-#[test]
-fn test_parse_loop_simulation_output() {
-    let path = asset_path().join("Wasservoxel.log");
-    let out = parse_simulation_output_from_file(&path);
-    assert_eq!(out.total_cpu_time.unwrap(), 1997.04);
-    assert_eq!(out.simulation_finished.unwrap(), true);
-    let dose = out.dose.unwrap();
-    let dose0 = (
-        "PSS_Box".to_string(),
-        UncertainF64::from_value_rstd(0.0, 1.0),
-    );
-    let dose1 = (
-        "Messwelt_0".to_string(),
-        UncertainF64::from_value_rstd(5.6425e-13, 0.955e-2),
-    );
-    let dose81 = (
-        "Messwelt_4".to_string(),
-        UncertainF64::from_value_rstd(2.1412e-12, 1.359e-2),
-    );
-    assert_eq!(dose[0], dose0);
-    assert_eq!(dose[1], dose1);
-    assert_eq!(dose[81], dose81);
-    assert_eq!(dose.len(), 82);
-}
-
-#[test]
-fn test_parse_timeout_simulation_output() {
-    let path1 = asset_path().join("timeout.log");
-    let path2 = asset_path().join("statistical_accuracy_reached.log");
-    for path in [path1, path2].iter() {
-        let out = parse_simulation_output_from_file(&path);
-        assert!(out.simulation_finished.unwrap());
-        let dose = out.dose.unwrap();
-        assert_eq!(dose.len(), 1);
-        assert_eq!(
-            dose[0],
-            (
-                "geo".to_string(),
-                UncertainF64::from_value_rstd(5.3408e-10, 0.124e-2)
-            )
-        );
-    }
 }
 
 pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutput> {
@@ -220,4 +142,88 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutp
         simulation_finished,
     };
     Ok(ret)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use util::asset_path;
+    use uncertain::UncertainF64;
+    fn parse_simulation_output_from_file(path: &Path) -> SingSimParsedOutput {
+        use std::fs::File;
+        use std::io::BufReader;
+        let f = File::open(path).unwrap();
+        let mut r = BufReader::new(f);
+        let out = parse_simulation_output(&mut r).unwrap();
+        out
+    }
+
+    #[test]
+    fn test_parse_dot_separated_key_value() {
+        let s = "configuration...linux64";
+        assert_eq!(
+            parse_dot_separated_key_value(s),
+            Some(("configuration".to_string(), "linux64".to_string()))
+        );
+    }
+
+    #[test]
+    fn test_parse_geometry_dose() {
+        let line = "Block_                    0.0000e+00 +/- 100.000% \n";
+        assert_eq!(
+            parse_geometry_dose(&line),
+            Ok(("Block_".to_string(), UncertainF64::from_value_rstd(0., 1.)))
+        );
+
+        let line = "Block_                    2.1867e-16 +/- 54.499 % \n";
+        let score = UncertainF64::from_value_rstd(0.00000000000000021867, 0.54499);
+        assert_eq!(
+            parse_geometry_dose(&line),
+            Ok(("Block_".to_string(), score))
+        );
+    }
+
+    #[test]
+    fn test_parse_loop_simulation_output() {
+        let path = asset_path().join("Wasservoxel.log");
+        let out = parse_simulation_output_from_file(&path);
+        assert_eq!(out.total_cpu_time.unwrap(), 1997.04);
+        assert_eq!(out.simulation_finished.unwrap(), true);
+        let dose = out.dose.unwrap();
+        let dose0 = (
+            "PSS_Box".to_string(),
+            UncertainF64::from_value_rstd(0.0, 1.0),
+        );
+        let dose1 = (
+            "Messwelt_0".to_string(),
+            UncertainF64::from_value_rstd(5.6425e-13, 0.955e-2),
+        );
+        let dose81 = (
+            "Messwelt_4".to_string(),
+            UncertainF64::from_value_rstd(2.1412e-12, 1.359e-2),
+        );
+        assert_eq!(dose[0], dose0);
+        assert_eq!(dose[1], dose1);
+        assert_eq!(dose[81], dose81);
+        assert_eq!(dose.len(), 82);
+    }
+
+    #[test]
+    fn test_parse_timeout_simulation_output() {
+        let path1 = asset_path().join("timeout.log");
+        let path2 = asset_path().join("statistical_accuracy_reached.log");
+        for path in [path1, path2].iter() {
+            let out = parse_simulation_output_from_file(&path);
+            assert!(out.simulation_finished.unwrap());
+            let dose = out.dose.unwrap();
+            assert_eq!(dose.len(), 1);
+            assert_eq!(
+                dose[0],
+                (
+                    "geo".to_string(),
+                    UncertainF64::from_value_rstd(5.3408e-10, 0.124e-2)
+                )
+            );
+        }
+    }
 }

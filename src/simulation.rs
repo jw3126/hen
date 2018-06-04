@@ -16,6 +16,7 @@ use util::{debug_string, Result};
 use util;
 use std::result::Result as StdResult;
 use itertools::Itertools;
+use omittable::Omittable;
 
 pub type Seed = (usize, usize); // is this correct integer type?
 
@@ -118,13 +119,6 @@ pub struct SingSimFinished {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub enum Omittable<T> {
-    Omitted,
-    Fail(String),
-    Available(T),
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimParsedOutput {
     pub dose: Result<Vec<(String, UncertainF64)>>,
     pub total_cpu_time: Result<f64>,
@@ -160,25 +154,35 @@ pub struct ParSimReport {
 
 impl ParSimInput {
     pub fn run(&self) -> Result<ParSimFinished> {
+        let cleanup = true;
+        self.run_with_cleanup_option(cleanup)
+    }
+
+    pub fn run_with_cleanup_option(&self, cleanup: bool) -> Result<ParSimFinished> {
         self.validate()?;
         let stream = TokenStream::parse_string(&(self.prototype.content))?;
         let streams = stream.split(&self.seeds, &self.ncases)?;
         let application = &self.prototype.application;
         let pegsfile = &self.prototype.pegsfile;
-        let create_sim = |content: String| {
-            SingSimInputBuilder::new()
+        let compute_single_output = |content: String| {
+            let sim = SingSimInputBuilder::new()
                 .application(application)
                 .content(&content)
                 .pegsfile(pegsfile)
                 .filename(&self.prototype.filename)
                 .build()
-                .unwrap()
+                .unwrap();
+            if cleanup {
+                sim.run_and_cleanup()
+            } else {
+                sim.run()
+            }
         };
+
         let outputs: Vec<SingSimFinished> = streams
             .par_iter()
-            .map(|s| s.to_string())
-            .map(create_sim)
-            .map(|sim| sim.clone().run())
+            .map(TokenStream::to_string)
+            .map(compute_single_output)
             .collect();
         let ret = ParSimFinished {
             input: self.clone(),
@@ -284,6 +288,11 @@ impl SingSimInput {
             stderr: String::from_utf8_lossy(&out.stderr).to_string(),
             exit_status: out.status.code().unwrap_or(-1),
         };
+        ret
+    }
+
+    pub fn run_and_cleanup(&self) -> SingSimFinished {
+        let ret = self.run();
         self.cleanup();
         ret
     }
@@ -337,56 +346,6 @@ impl SingSimInput {
         let ncases = mncases.unwrap_or(stream.generate_ncases(n)?);
 
         Ok(self.split(ncases, seeds))
-    }
-}
-
-impl<T> Omittable<T> {
-    pub fn from_result(r: Result<T>) -> Omittable<T> {
-        match r {
-            Ok(value) => Omittable::Available(value),
-            Err(s) => Omittable::Fail(s),
-        }
-    }
-
-    pub fn is_available(&self) -> bool {
-        match self {
-            &Omittable::Available(_) => true,
-            _ => false,
-        }
-    }
-
-    pub fn into_result(self) -> Result<T> {
-        match self {
-            Omittable::Fail(s) => Err(s),
-            Omittable::Omitted => Err("Omitted".to_string()),
-            Omittable::Available(t) => Ok(t),
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn map<U, F: Fn(T) -> U>(self, f: F) -> Omittable<U> {
-        match self {
-            Omittable::Available(value) => Omittable::Available(f(value)),
-            Omittable::Fail(s) => Omittable::Fail(s.clone()),
-            Omittable::Omitted => Omittable::Omitted,
-        }
-    }
-
-    pub fn map2<S, U, F: Fn(S, T) -> U>(f: F, s: Omittable<S>, t: Omittable<T>) -> Omittable<U> {
-        match s {
-            Omittable::Fail(msg) => Omittable::Fail(msg),
-
-            Omittable::Omitted => match t {
-                Omittable::Fail(msg) => Omittable::Fail(msg),
-                _ => Omittable::Omitted,
-            },
-
-            Omittable::Available(s_val) => match t {
-                Omittable::Available(t_val) => Omittable::Available(f(s_val, t_val)),
-                Omittable::Omitted => Omittable::Omitted,
-                Omittable::Fail(msg) => Omittable::Fail(msg),
-            },
-        }
     }
 }
 
@@ -704,19 +663,6 @@ impl ParSimReport {
 impl fmt::Display for ParSimReport {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         writeln!(f, "{}", self.to_string_all())
-    }
-}
-
-impl<T> fmt::Display for Omittable<T>
-where
-    T: fmt::Display,
-{
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            &Omittable::Omitted => writeln!(f, ""),
-            &Omittable::Fail(ref msg) => writeln!(f, "{}", msg),
-            &Omittable::Available(ref x) => writeln!(f, "{}", x),
-        }
     }
 }
 

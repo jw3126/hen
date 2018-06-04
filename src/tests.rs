@@ -211,7 +211,7 @@ fn test_split() {
     }
     assert_eq!(seeds.len(), 6);
     assert_eq!(ncases.len(), 6);
-    let ncase_expected = 5000;
+    let ncase_expected = 1000;
     let ncase_sum: u64 = ncases.iter().sum();
     assert!(ncase_sum <= ncase_expected);
     assert!(ncase_sum >= ncase_expected - 6);

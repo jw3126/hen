@@ -32,6 +32,7 @@ mod simulation;
 mod output_parser;
 mod util;
 mod uncertain;
+mod omittable;
 mod app;
 
 #[cfg(test)]

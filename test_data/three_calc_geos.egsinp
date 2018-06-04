@@ -40,7 +40,7 @@
     simulation source = the_source
 :stop source definition:
 :start run control:
-    ncase = 5000
+    ncase = 1000
     nbatch = 10
 :stop run control:
 :start rng definition:
@@ -66,5 +66,5 @@
     :stop calculation geometry:
 :stop scoring options:
 :start MC transport parameter:
-    Global ECUT = 0.521
+    Global ECUT = 10
 :stop MC transport parameter:

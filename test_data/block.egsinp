@@ -112,7 +112,7 @@
     simulation source = the_source
 :stop source definition:
 :start run control:
-    ncase = 100000
+    ncase = 10000
     nbatch = 10
 :stop run control:
 :start rng definition:
@@ -134,7 +134,7 @@
     cs enhancement = 0
 :stop variance reduction:
 :start MC transport parameter:
-    Global ECUT = 0.521
+    Global ECUT = 10
 :stop MC transport parameter:
 # 
 # a

@@ -15,7 +15,8 @@ use util::{read_paths_in_dir, HenInfo};
 
 mod util;
 mod combine;
-use app::util::{arg_application, arg_input, arg_output, arg_pegsfile, arg_report, GetMatch, SubCmd};
+use app::util::{arg_application, arg_cleanup, arg_input, arg_output, arg_pegsfile, arg_report,
+                GetMatch, SubCmd};
 use app::combine::CombineConfig;
 
 fn create_app() -> clap::App<'static, 'static> {
@@ -29,6 +30,7 @@ fn create_app() -> clap::App<'static, 'static> {
                 .version(crate_version!())
                 .author(crate_authors!())
                 .arg(arg_input())
+                .arg(arg_cleanup())
                 .arg(arg_output())
                 .arg(arg_pegsfile())
                 .arg(arg_application())
@@ -360,6 +362,7 @@ struct RunConfig {
     ncases: Option<Vec<u64>>,
     nthreads: usize,
     dir: bool, // run all files in a directory
+    cleanup: bool,
 }
 
 impl RunConfig {
@@ -386,7 +389,7 @@ impl RunConfig {
             None => {}
             Some(d) => fs::create_dir_all(d).map_err(debug_string)?,
         };
-        let out = p.run()?.report();
+        let out = p.run_with_cleanup_option(self.cleanup)?.report();
         println!("{}", out);
         save(output_path, &out)
     }
@@ -467,6 +470,7 @@ impl SubCmd for RunConfig {
                 Some(v)
             }
         };
+        let cleanup = m.get_parse("CLEANUP")?;
         let ret = RunConfig {
             inputpath,
             application,
@@ -476,6 +480,7 @@ impl SubCmd for RunConfig {
             dir,
             ncases,
             seeds,
+            cleanup,
         };
         ret.validate()?;
         Ok(ret)
