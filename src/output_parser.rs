@@ -97,6 +97,36 @@ fn test_parse_geometry_dose() {
     );
 }
 
+#[test]
+fn test_parse_loop_simulation_output() {
+    use std::fs::File;
+    use std::io::BufReader;
+    use util::asset_path;
+    let path = asset_path().join("Wasservoxel.log");
+    let f = File::open(path).unwrap();
+    let mut r = BufReader::new(f);
+    let out = parse_simulation_output(&mut r).unwrap();
+    assert_eq!(out.total_cpu_time.unwrap(), 1997.04);
+    assert_eq!(out.simulation_finished.unwrap(), true);
+    let dose = out.dose.unwrap();
+    let dose0 = (
+        "PSS_Box".to_string(),
+        UncertainF64::from_value_rstd(0.0, 1.0),
+    );
+    let dose1 = (
+        "Messwelt_0".to_string(),
+        UncertainF64::from_value_rstd(5.6425e-13, 0.955e-2),
+    );
+    let dose81 = (
+        "Messwelt_4".to_string(),
+        UncertainF64::from_value_rstd(2.1412e-12, 1.359e-2),
+    );
+    assert_eq!(dose[0], dose0);
+    assert_eq!(dose[1], dose1);
+    assert_eq!(dose[81], dose81);
+    assert_eq!(dose.len(), 82);
+}
+
 pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutput> {
     let re = Regex::new("^==(=*)").unwrap();
     read_line_until(reader, &re);

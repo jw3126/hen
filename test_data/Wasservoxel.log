@@ -1,0 +1,922 @@
+In EGS_Application::initSimulation()
+================================================================================
+EGSnrc version 4 for x86_64-unknown-linux-gnu          Tue May 29 08:27:51 2018
+================================================================================
+configuration.............................................linux
+user code.................................................egs_chamber
+pegs file.................................................ptw521icru on EGS_HOME
+using host................................................egs-job-s50vz
+input file................................................PDD_Wasservoxel_111
+output file(s)............................................PDD_Wasservoxel_111
+================================================================================
+
+               *************************************************
+               *                                               *
+               *               egs_chamber CSE)                *
+               *                                               *
+               *************************************************
+
+This is EGS_ChamberApplication Revision: 1.21  based on
+      EGS_AdvancedApplication Revision: 1.39 
+
+In initCrossSections(): spin effects = 1
+Property Photon cross-sections output: 0
+Property Photonuclear attenuation: 0
+Property Bound Compton scattering: 3
+Property Radiative Compton corrections: 0
+Property Rayleigh scattering: 0
+Property Atomic relaxations: 1
+Property Photoelectron angular sampling: 1
+Property Spin effects: 1
+Property Triplet production: 0
+Property Brems cross sections: 0
+Property Brems angular sampling: 1
+Property Pair cross sections: 0
+Property Pair angular sampling: 1
+Property Electron-step algorithm: 0
+Property Boundary crossing algorithm: 0
+ ===> Photonuclear flag:   0
+ Found medium with gas pressure
+ Rayleigh data available for medium  2 in PEGS4 data set.
+
+(Re)-initializing photon cross section data
+Using data files from the series xcom
+
+Photon cross sections: xcom Compton cross sections: default
+Using Compton cross sections from /root/EGSnrc/HEN_HOUSE/data/compton_sigma.data
+Working on medium   1 ... OK
+Working on medium   2 ... OK
+  Reading screened Rutherford MS data ...............  done 
+
+
+Reading spin data base from /root/EGSnrc/HEN_HOUSE/data/spinms.data
+EGSnrc spin data, version 2.0   
+Data generated on a machine with 1234 endianess
+The endianess of this CPU is 1234
+Ranges:      1.00   100.00  0.30054  1.00000
+
+
+  medium    1 .....................  done
+  medium    2 .....................  done
+  
+  Medium            1  sige =    6.4595132015164030        6.2354615343201143       monotone =  F F
+  Medium            2  sige =    6.3784170227787529        6.1807995067678911       monotone =  F F
+  
+  Initializing tmxs for estepe =   0.25000000000000000       and ximax =   0.50000000000000000     
+  
+ Output from subroutine EDGSET:
+ ==============================
+ Atomic relaxations requested! 
+
+
+ Reading photo-absorption data ..... Done
+
+ Reading relaxation data ..... Done
+
+ Reading photo cross section data ..... Done
+
+
+Reading EADL relaxation data ......
+-> Element Z =   6 has  4 shells
+-> Element Z =   7 has  4 shells
+-> Element Z =   8 has  4 shells
+-> Element Z =  18 has  7 shells
+-> Element Z =   1 has  1 shells
+...... Done.
+
+ Bound Compton scattering requested, reading data ......  Done
+
+ Initializing Bound Compton scattering ......
+ Medium   1 has  18 shells: 
+  1  10  1  0.00004 0.210E+02     0.285
+  2  11  2  0.00004 0.110E+03     0.011
+  3  12  3  0.00004 0.669E+02     0.011
+  4  13  1  0.21603 0.178E+02     0.410
+  5  14  2  0.21603 0.921E+02     0.015
+  6  15  3  0.21603 0.558E+02     0.014
+  7  16  4  0.10801 0.558E+02     0.014
+  8  17  1  0.05805 0.155E+02     0.543
+  9  18  2  0.05805 0.793E+02     0.024
+ 10  19  3  0.05805 0.479E+02     0.014
+ 11  20  4  0.05805 0.479E+02     0.014
+ 12  72  1  0.00129 0.671E+01     3.206
+ 13  73  2  0.00129 0.271E+02     0.326
+ 14  74  3  0.00129 0.142E+02     0.251
+ 15  75  4  0.00257 0.142E+02     0.249
+ 16  76  5  0.00129 0.889E+02     0.029
+ 17  77  5  0.00129 0.606E+02     0.016
+ 18  78  5  0.00257 0.606E+02     0.016
+ Medium   2 has   5 shells: 
+  1   1  1  0.20000 0.116E+03     0.014
+  2  17  1  0.20000 0.155E+02     0.543
+  3  18  2  0.20000 0.793E+02     0.024
+  4  19  3  0.20000 0.479E+02     0.014
+  5  20  4  0.20000 0.479E+02     0.014
+...... Done.
+
+ EGSnrc SUCCESSFULLY 'HATCHED' FOR     2 MEDIA.
+
+
+The following media are defined:
+================================
+
+  0  AIR521ICRU               AE= 0.5210 AP= 0.0100 0
+  1  H2O521ICRU               AE= 0.5210 AP= 0.0100 1
+
+
+Transport parameter and cross section options:
+==============================================
+Photon cross sections                             xcom            
+Compton cross sections                            default         
+Global Pcut                                       0.1
+Pair cross sections                               BH
+Pair angular sampling                             Simple
+Triplet production                                Off
+Bound Compton scattering                          norej
+Radiative Compton corrections                     Off
+Rayleigh scattering                               Off
+Atomic relaxations                                On
+Photoelectron angular sampling                    On
+Photonuclear attenuation                          Off
+Photonuclear cross sections                       default         
+
+Global Ecut                                       0.521
+Brems cross sections                              BH
+Brems angular sampling                            KM
+Spin effects                                      On
+Electron Impact Ionization                        Off             
+Global Smax                                       1e+10
+ESTEPE                                            0.25
+Ximax                                             0.5
+Boundary crossing algorithm                       Exact
+Skin depth for BCA                                3
+Electron-step algorithm                           EGSnrc
+==============================================
+
+initScoring: missing/wrong 'sub geometries'  for geometry 'PSS_Box'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.05'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.1'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.15'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.2'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.25'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.3'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.35'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.4'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.45'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.5'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.55'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.6'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.65'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.7'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.75'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.8'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.85'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.9'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_0.95'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.05'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.1'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.15'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.2'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.25'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.3'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.35'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.4'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.45'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.5'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.55'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.6'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.65'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.7'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.75'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.8'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.85'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.9'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_1.95'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.05'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.1'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.15'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.2'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.25'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.3'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.35'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.4'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.45'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.5'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.55'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.6'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.65'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.7'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.75'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.8'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.85'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.9'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_2.95'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.05'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.1'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.15'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.2'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.25'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.3'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.35'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.4'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.45'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.5'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.55'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.6'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.65'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.7'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.75'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.8'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.85'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.9'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_3.95'
+initScoring: missing/wrong 'sub geometries'  for geometry 'Messwelt_4'
+
+=========================positioning uncertainty=========================
+Isocenter positioning uncertainty option is set OFF.
+
+Cavity positioning uncertainty option is set OFF.
+
+Number of uncorrelated estimators is 0 among 82 geometries.
+Number of correlated estimators is 0 among 82 geometries.
+
+=========================================================================EGS_ObjectFactory::createObjects(): the input is not of type ausgab object definition and also does not have items of this type
+
+
+======================== geometry =====================
+ type = EGS_EnvelopeGeometry
+ name = Messwelt_0
+ number of regions = 4
+ base geometry = Weltvolumen (type EGS_Box)
+ inscribed geometries:
+   Phantom_mit_Voxel_0 (type EGS_EnvelopeGeometry)
+=======================================================
+
+
+The simulation uses the following source:
+=========================================
+ Transformed Parallel beam from a shape of type rectangle with tabulated histogram spectrum defined in mohan6.spectrum, photons
+
+
+Random number generator:
+============================================
+  type                = ranmar
+  high resolution     = no
+  initial seeds       = 1 111
+  numbers used so far = 0
+
+
+Variance reduction
+====================================================
+Photon splitting = off
+Range rejection = Russian Roullette (RR)
+    rejection in cavity for E < 0.5
+    else RR with survival probability 0.00390625
+	multiple cavity option is turned ON
+	following cavity-geometries are used:
+	1) PSS_Box -> PSS_Box
+	2) Messwelt_0 -> Enhancement_mit_Voxel_0cm
+	3) Messwelt_0.05 -> Enhancement_mit_Voxel_0.05cm
+	4) Messwelt_0.1 -> Enhancement_mit_Voxel_0.1cm
+	5) Messwelt_0.15 -> Enhancement_mit_Voxel_0.15cm
+	6) Messwelt_0.2 -> Enhancement_mit_Voxel_0.2cm
+	7) Messwelt_0.25 -> Enhancement_mit_Voxel_0.25cm
+	8) Messwelt_0.3 -> Enhancement_mit_Voxel_0.3cm
+	9) Messwelt_0.35 -> Enhancement_mit_Voxel_0.35cm
+	10) Messwelt_0.4 -> Enhancement_mit_Voxel_0.4cm
+	11) Messwelt_0.45 -> Enhancement_mit_Voxel_0.45cm
+	12) Messwelt_0.5 -> Enhancement_mit_Voxel_0.5cm
+	13) Messwelt_0.55 -> Enhancement_mit_Voxel_0.55cm
+	14) Messwelt_0.6 -> Enhancement_mit_Voxel_0.6cm
+	15) Messwelt_0.65 -> Enhancement_mit_Voxel_0.65cm
+	16) Messwelt_0.7 -> Enhancement_mit_Voxel_0.7cm
+	17) Messwelt_0.75 -> Enhancement_mit_Voxel_0.75cm
+	18) Messwelt_0.8 -> Enhancement_mit_Voxel_0.8cm
+	19) Messwelt_0.85 -> Enhancement_mit_Voxel_0.85cm
+	20) Messwelt_0.9 -> Enhancement_mit_Voxel_0.9cm
+	21) Messwelt_0.95 -> Enhancement_mit_Voxel_0.95cm
+	22) Messwelt_1 -> Enhancement_mit_Voxel_1cm
+	23) Messwelt_1.05 -> Enhancement_mit_Voxel_1.05cm
+	24) Messwelt_1.1 -> Enhancement_mit_Voxel_1.1cm
+	25) Messwelt_1.15 -> Enhancement_mit_Voxel_1.15cm
+	26) Messwelt_1.2 -> Enhancement_mit_Voxel_1.2cm
+	27) Messwelt_1.25 -> Enhancement_mit_Voxel_1.25cm
+	28) Messwelt_1.3 -> Enhancement_mit_Voxel_1.3cm
+	29) Messwelt_1.35 -> Enhancement_mit_Voxel_1.35cm
+	30) Messwelt_1.4 -> Enhancement_mit_Voxel_1.4cm
+	31) Messwelt_1.45 -> Enhancement_mit_Voxel_1.45cm
+	32) Messwelt_1.5 -> Enhancement_mit_Voxel_1.5cm
+	33) Messwelt_1.55 -> Enhancement_mit_Voxel_1.55cm
+	34) Messwelt_1.6 -> Enhancement_mit_Voxel_1.6cm
+	35) Messwelt_1.65 -> Enhancement_mit_Voxel_1.65cm
+	36) Messwelt_1.7 -> Enhancement_mit_Voxel_1.7cm
+	37) Messwelt_1.75 -> Enhancement_mit_Voxel_1.75cm
+	38) Messwelt_1.8 -> Enhancement_mit_Voxel_1.8cm
+	39) Messwelt_1.85 -> Enhancement_mit_Voxel_1.85cm
+	40) Messwelt_1.9 -> Enhancement_mit_Voxel_1.9cm
+	41) Messwelt_1.95 -> Enhancement_mit_Voxel_1.95cm
+	42) Messwelt_2 -> Enhancement_mit_Voxel_2cm
+	43) Messwelt_2.05 -> Enhancement_mit_Voxel_2.05cm
+	44) Messwelt_2.1 -> Enhancement_mit_Voxel_2.1cm
+	45) Messwelt_2.15 -> Enhancement_mit_Voxel_2.15cm
+	46) Messwelt_2.2 -> Enhancement_mit_Voxel_2.2cm
+	47) Messwelt_2.25 -> Enhancement_mit_Voxel_2.25cm
+	48) Messwelt_2.3 -> Enhancement_mit_Voxel_2.3cm
+	49) Messwelt_2.35 -> Enhancement_mit_Voxel_2.35cm
+	50) Messwelt_2.4 -> Enhancement_mit_Voxel_2.4cm
+	51) Messwelt_2.45 -> Enhancement_mit_Voxel_2.45cm
+	52) Messwelt_2.5 -> Enhancement_mit_Voxel_2.5cm
+	53) Messwelt_2.55 -> Enhancement_mit_Voxel_2.55cm
+	54) Messwelt_2.6 -> Enhancement_mit_Voxel_2.6cm
+	55) Messwelt_2.65 -> Enhancement_mit_Voxel_2.65cm
+	56) Messwelt_2.7 -> Enhancement_mit_Voxel_2.7cm
+	57) Messwelt_2.75 -> Enhancement_mit_Voxel_2.75cm
+	58) Messwelt_2.8 -> Enhancement_mit_Voxel_2.8cm
+	59) Messwelt_2.85 -> Enhancement_mit_Voxel_2.85cm
+	60) Messwelt_2.9 -> Enhancement_mit_Voxel_2.9cm
+	61) Messwelt_2.95 -> Enhancement_mit_Voxel_2.95cm
+	62) Messwelt_3 -> Enhancement_mit_Voxel_3cm
+	63) Messwelt_3.05 -> Enhancement_mit_Voxel_3.05cm
+	64) Messwelt_3.1 -> Enhancement_mit_Voxel_3.1cm
+	65) Messwelt_3.15 -> Enhancement_mit_Voxel_3.15cm
+	66) Messwelt_3.2 -> Enhancement_mit_Voxel_3.2cm
+	67) Messwelt_3.25 -> Enhancement_mit_Voxel_3.25cm
+	68) Messwelt_3.3 -> Enhancement_mit_Voxel_3.3cm
+	69) Messwelt_3.35 -> Enhancement_mit_Voxel_3.35cm
+	70) Messwelt_3.4 -> Enhancement_mit_Voxel_3.4cm
+	71) Messwelt_3.45 -> Enhancement_mit_Voxel_3.45cm
+	72) Messwelt_3.5 -> Enhancement_mit_Voxel_3.5cm
+	73) Messwelt_3.55 -> Enhancement_mit_Voxel_3.55cm
+	74) Messwelt_3.6 -> Enhancement_mit_Voxel_3.6cm
+	75) Messwelt_3.65 -> Enhancement_mit_Voxel_3.65cm
+	76) Messwelt_3.7 -> Enhancement_mit_Voxel_3.7cm
+	77) Messwelt_3.75 -> Enhancement_mit_Voxel_3.75cm
+	78) Messwelt_3.8 -> Enhancement_mit_Voxel_3.8cm
+	79) Messwelt_3.85 -> Enhancement_mit_Voxel_3.85cm
+	80) Messwelt_3.9 -> Enhancement_mit_Voxel_3.9cm
+	81) Messwelt_3.95 -> Enhancement_mit_Voxel_3.95cm
+	82) Messwelt_4 -> Enhancement_mit_Voxel_4cm
+
+scoring phase-space at cavity of 'PSS_Box'
+
+photon cross-section enhancement = On
+ 1) PSS_Box
+    regions    : 
+    enhancement: 
+
+ 2) Messwelt_0
+    regions    :  2 3
+    enhancement:  128 128
+
+ 3) Messwelt_0.05
+    regions    :  2 3
+    enhancement:  128 128
+
+ 4) Messwelt_0.1
+    regions    :  2 3
+    enhancement:  128 128
+
+ 5) Messwelt_0.15
+    regions    :  2 3
+    enhancement:  128 128
+
+ 6) Messwelt_0.2
+    regions    :  2 3
+    enhancement:  128 128
+
+ 7) Messwelt_0.25
+    regions    :  2 3
+    enhancement:  128 128
+
+ 8) Messwelt_0.3
+    regions    :  2 3
+    enhancement:  128 128
+
+ 9) Messwelt_0.35
+    regions    :  2 3
+    enhancement:  128 128
+
+ 10) Messwelt_0.4
+    regions    :  2 3
+    enhancement:  128 128
+
+ 11) Messwelt_0.45
+    regions    :  2 3
+    enhancement:  128 128
+
+ 12) Messwelt_0.5
+    regions    :  2 3
+    enhancement:  128 128
+
+ 13) Messwelt_0.55
+    regions    :  2 3
+    enhancement:  128 128
+
+ 14) Messwelt_0.6
+    regions    :  2 3
+    enhancement:  128 128
+
+ 15) Messwelt_0.65
+    regions    :  2 3
+    enhancement:  128 128
+
+ 16) Messwelt_0.7
+    regions    :  2 3
+    enhancement:  128 128
+
+ 17) Messwelt_0.75
+    regions    :  2 3
+    enhancement:  128 128
+
+ 18) Messwelt_0.8
+    regions    :  2 3
+    enhancement:  128 128
+
+ 19) Messwelt_0.85
+    regions    :  2 3
+    enhancement:  128 128
+
+ 20) Messwelt_0.9
+    regions    :  2 3
+    enhancement:  128 128
+
+ 21) Messwelt_0.95
+    regions    :  2 3
+    enhancement:  128 128
+
+ 22) Messwelt_1
+    regions    :  2 3
+    enhancement:  128 128
+
+ 23) Messwelt_1.05
+    regions    :  2 3
+    enhancement:  128 128
+
+ 24) Messwelt_1.1
+    regions    :  2 3
+    enhancement:  128 128
+
+ 25) Messwelt_1.15
+    regions    :  2 3
+    enhancement:  128 128
+
+ 26) Messwelt_1.2
+    regions    :  2 3
+    enhancement:  128 128
+
+ 27) Messwelt_1.25
+    regions    :  2 3
+    enhancement:  128 128
+
+ 28) Messwelt_1.3
+    regions    :  2 3
+    enhancement:  128 128
+
+ 29) Messwelt_1.35
+    regions    :  2 3
+    enhancement:  128 128
+
+ 30) Messwelt_1.4
+    regions    :  2 3
+    enhancement:  128 128
+
+ 31) Messwelt_1.45
+    regions    :  2 3
+    enhancement:  128 128
+
+ 32) Messwelt_1.5
+    regions    :  2 3
+    enhancement:  128 128
+
+ 33) Messwelt_1.55
+    regions    :  2 3
+    enhancement:  128 128
+
+ 34) Messwelt_1.6
+    regions    :  2 3
+    enhancement:  128 128
+
+ 35) Messwelt_1.65
+    regions    :  2 3
+    enhancement:  128 128
+
+ 36) Messwelt_1.7
+    regions    :  2 3
+    enhancement:  128 128
+
+ 37) Messwelt_1.75
+    regions    :  2 3
+    enhancement:  128 128
+
+ 38) Messwelt_1.8
+    regions    :  2 3
+    enhancement:  128 128
+
+ 39) Messwelt_1.85
+    regions    :  2 3
+    enhancement:  128 128
+
+ 40) Messwelt_1.9
+    regions    :  2 3
+    enhancement:  128 128
+
+ 41) Messwelt_1.95
+    regions    :  2 3
+    enhancement:  128 128
+
+ 42) Messwelt_2
+    regions    :  2 3
+    enhancement:  128 128
+
+ 43) Messwelt_2.05
+    regions    :  2 3
+    enhancement:  128 128
+
+ 44) Messwelt_2.1
+    regions    :  2 3
+    enhancement:  128 128
+
+ 45) Messwelt_2.15
+    regions    :  2 3
+    enhancement:  128 128
+
+ 46) Messwelt_2.2
+    regions    :  2 3
+    enhancement:  128 128
+
+ 47) Messwelt_2.25
+    regions    :  2 3
+    enhancement:  128 128
+
+ 48) Messwelt_2.3
+    regions    :  2 3
+    enhancement:  128 128
+
+ 49) Messwelt_2.35
+    regions    :  2 3
+    enhancement:  128 128
+
+ 50) Messwelt_2.4
+    regions    :  2 3
+    enhancement:  128 128
+
+ 51) Messwelt_2.45
+    regions    :  2 3
+    enhancement:  128 128
+
+ 52) Messwelt_2.5
+    regions    :  2 3
+    enhancement:  128 128
+
+ 53) Messwelt_2.55
+    regions    :  2 3
+    enhancement:  128 128
+
+ 54) Messwelt_2.6
+    regions    :  2 3
+    enhancement:  128 128
+
+ 55) Messwelt_2.65
+    regions    :  2 3
+    enhancement:  128 128
+
+ 56) Messwelt_2.7
+    regions    :  2 3
+    enhancement:  128 128
+
+ 57) Messwelt_2.75
+    regions    :  2 3
+    enhancement:  128 128
+
+ 58) Messwelt_2.8
+    regions    :  2 3
+    enhancement:  128 128
+
+ 59) Messwelt_2.85
+    regions    :  2 3
+    enhancement:  128 128
+
+ 60) Messwelt_2.9
+    regions    :  2 3
+    enhancement:  128 128
+
+ 61) Messwelt_2.95
+    regions    :  2 3
+    enhancement:  128 128
+
+ 62) Messwelt_3
+    regions    :  2 3
+    enhancement:  128 128
+
+ 63) Messwelt_3.05
+    regions    :  2 3
+    enhancement:  128 128
+
+ 64) Messwelt_3.1
+    regions    :  2 3
+    enhancement:  128 128
+
+ 65) Messwelt_3.15
+    regions    :  2 3
+    enhancement:  128 128
+
+ 66) Messwelt_3.2
+    regions    :  2 3
+    enhancement:  128 128
+
+ 67) Messwelt_3.25
+    regions    :  2 3
+    enhancement:  128 128
+
+ 68) Messwelt_3.3
+    regions    :  2 3
+    enhancement:  128 128
+
+ 69) Messwelt_3.35
+    regions    :  2 3
+    enhancement:  128 128
+
+ 70) Messwelt_3.4
+    regions    :  2 3
+    enhancement:  128 128
+
+ 71) Messwelt_3.45
+    regions    :  2 3
+    enhancement:  128 128
+
+ 72) Messwelt_3.5
+    regions    :  2 3
+    enhancement:  128 128
+
+ 73) Messwelt_3.55
+    regions    :  2 3
+    enhancement:  128 128
+
+ 74) Messwelt_3.6
+    regions    :  2 3
+    enhancement:  128 128
+
+ 75) Messwelt_3.65
+    regions    :  2 3
+    enhancement:  128 128
+
+ 76) Messwelt_3.7
+    regions    :  2 3
+    enhancement:  128 128
+
+ 77) Messwelt_3.75
+    regions    :  2 3
+    enhancement:  128 128
+
+ 78) Messwelt_3.8
+    regions    :  2 3
+    enhancement:  128 128
+
+ 79) Messwelt_3.85
+    regions    :  2 3
+    enhancement:  128 128
+
+ 80) Messwelt_3.9
+    regions    :  2 3
+    enhancement:  128 128
+
+ 81) Messwelt_3.95
+    regions    :  2 3
+    enhancement:  128 128
+
+ 82) Messwelt_4
+    regions    :  2 3
+    enhancement:  128 128
+
+
+region by region ECUT = Off
+
+=============================================
+
+
+Starting simulation on Tue May 29 08:27:52 2018
+
+    Fresh simulation of 1400000 histories
+
+
+
+Running 1400000 histories
+
+  Batch             CPU time        Result   Uncertainty(%)
+==========================================================
+      1               18.81     4.4628e-13           8.68
+      2               38.70    4.96147e-13           6.04
+      3               58.43    5.12314e-13           4.88
+      4               79.76    5.44811e-13           5.02
+      5               98.44    5.36446e-13           4.39
+      6              118.66    5.27684e-13           3.95
+      7              139.06    5.22388e-13           3.61
+      8              159.95     5.3614e-13           3.27
+      9              180.20    5.43204e-13           3.08
+     10              199.96     5.5024e-13           2.89
+     11              220.28    5.53603e-13           2.72
+     12              239.92    5.55848e-13           2.60
+     13              260.46     5.5373e-13           2.48
+     14              279.47    5.51657e-13           2.39
+     15              298.19    5.48135e-13           2.30
+     16              317.88    5.51498e-13           2.21
+     17              339.27    5.49567e-13           2.14
+     18              359.05    5.46968e-13           2.08
+     19              379.72    5.48355e-13           2.02
+     20              399.36    5.48365e-13           1.96
+     21              418.49    5.48495e-13           1.91
+     22              437.51    5.47748e-13           1.87
+     23              458.12    5.49496e-13           1.82
+     24              479.12     5.4969e-13           1.78
+     25              499.30    5.51907e-13           1.73
+     26              519.75    5.52651e-13           1.70
+     27              539.99    5.53414e-13           1.66
+     28              559.60    5.52972e-13           1.63
+     29              579.72    5.56339e-13           1.71
+     30              599.82    5.57661e-13           1.68
+     31              620.22    5.59448e-13           1.64
+     32              640.09     5.6022e-13           1.61
+     33              659.54    5.59615e-13           1.59
+     34              679.26    5.67179e-13           1.74
+     35              699.55    5.68375e-13           1.70
+     36              719.33    5.68466e-13           1.67
+     37              738.78    5.66841e-13           1.65
+     38              759.78    5.69874e-13           1.69
+     39              779.76     5.7281e-13           1.66
+     40              799.28    5.72231e-13           1.63
+     41              819.10    5.70333e-13           1.61
+     42              839.58    5.71377e-13           1.58
+     43              860.06    5.71308e-13           1.56
+     44              880.74    5.71459e-13           1.53
+     45              900.85    5.71674e-13           1.51
+     46              920.76    5.71356e-13           1.49
+     47              941.12    5.72911e-13           1.47
+     48              960.74    5.71948e-13           1.45
+     49              980.10     5.7213e-13           1.43
+     50              999.26    5.71276e-13           1.41
+     51             1018.06    5.70777e-13           1.39
+     52             1039.01    5.70617e-13           1.38
+     53             1059.67    5.71496e-13           1.36
+     54             1080.49    5.72169e-13           1.34
+     55             1102.52    5.73712e-13           1.32
+     56             1122.01     5.7371e-13           1.31
+     57             1141.89    5.74718e-13           1.33
+     58             1162.34    5.73332e-13           1.32
+     59             1182.95    5.73503e-13           1.30
+     60             1202.18    5.74527e-13           1.29
+     61             1222.44    5.74123e-13           1.27
+     62             1242.06    5.74206e-13           1.26
+     63             1261.15    5.73114e-13           1.25
+     64             1281.17    5.72402e-13           1.24
+     65             1301.30    5.72249e-13           1.23
+     66             1320.31    5.72015e-13           1.22
+     67             1339.99    5.71951e-13           1.20
+     68             1360.10    5.71617e-13           1.19
+     69             1380.08    5.71664e-13           1.18
+     70             1399.59    5.70567e-13           1.17
+     71             1419.47    5.70283e-13           1.16
+     72             1439.51    5.70021e-13           1.15
+     73             1458.70    5.69384e-13           1.14
+     74             1478.56    5.68922e-13           1.13
+     75             1499.29    5.67857e-13           1.12
+     76             1519.24    5.68688e-13           1.11
+     77             1538.75    5.68613e-13           1.10
+     78             1558.00    5.67916e-13           1.10
+     79             1577.96    5.68818e-13           1.09
+     80             1597.92    5.68263e-13           1.08
+     81             1618.72    5.68019e-13           1.07
+     82             1639.47    5.67586e-13           1.06
+     83             1658.75    5.68123e-13           1.05
+     84             1678.96    5.68119e-13           1.05
+     85             1699.34    5.67844e-13           1.04
+     86             1719.47    5.67957e-13           1.03
+     87             1740.11    5.68042e-13           1.02
+     88             1759.77    5.67981e-13           1.02
+     89             1780.22     5.6803e-13           1.01
+     90             1800.37    5.67154e-13           1.00
+     91             1819.72    5.66758e-13           1.00
+     92             1839.81    5.66478e-13           0.99
+     93             1859.30    5.65696e-13           0.98
+     94             1878.83    5.65376e-13           0.98
+     95             1898.68    5.64614e-13           0.97
+     96             1918.50    5.65048e-13           0.98
+     97             1938.70    5.64959e-13           0.97
+     98             1958.04     5.6467e-13           0.97
+     99             1977.89    5.64634e-13           0.96
+    100             1997.04    5.64233e-13           0.96
+
+
+Finished simulation
+
+Total cpu time for this run:            1997.04 (sec.) 0.5547(hours)
+Histories per hour:                     2.52374e+06   
+Number of random numbers used:          21488730286   
+Number of electron CH steps:            8.83836e+08   
+Number of all electron steps:           1.31195e+09   
+
+
+ last case = 1400000 fluence = 14000
+
+Geometry                        Cavity dose      
+-----------------------------------------------
+PSS_Box                   0.0000e+00 +/- 100.000% (this MUST be zero!)
+Messwelt_0                5.6425e-13 +/- 0.955  % 
+Messwelt_0.05             8.5457e-13 +/- 0.786  % 
+Messwelt_0.1              1.0943e-12 +/- 0.790  % 
+Messwelt_0.15             1.2648e-12 +/- 0.694  % 
+Messwelt_0.2              1.4112e-12 +/- 0.707  % 
+Messwelt_0.25             1.5527e-12 +/- 0.664  % 
+Messwelt_0.3              1.6777e-12 +/- 0.678  % 
+Messwelt_0.35             1.7601e-12 +/- 0.652  % 
+Messwelt_0.4              1.8399e-12 +/- 0.654  % 
+Messwelt_0.45             1.9090e-12 +/- 0.640  % 
+Messwelt_0.5              1.9600e-12 +/- 0.632  % 
+Messwelt_0.55             2.0247e-12 +/- 0.857  % 
+Messwelt_0.6              2.0373e-12 +/- 0.895  % 
+Messwelt_0.65             2.1154e-12 +/- 1.036  % 
+Messwelt_0.7              2.1156e-12 +/- 1.066  % 
+Messwelt_0.75             2.1595e-12 +/- 1.081  % 
+Messwelt_0.8              2.2048e-12 +/- 1.229  % 
+Messwelt_0.85             2.2135e-12 +/- 1.176  % 
+Messwelt_0.9              2.2382e-12 +/- 1.251  % 
+Messwelt_0.95             2.2717e-12 +/- 1.249  % 
+Messwelt_1                2.2959e-12 +/- 1.307  % 
+Messwelt_1.05             2.2775e-12 +/- 1.251  % 
+Messwelt_1.1              2.2940e-12 +/- 1.329  % 
+Messwelt_1.15             2.3355e-12 +/- 1.348  % 
+Messwelt_1.2              2.3285e-12 +/- 1.306  % 
+Messwelt_1.25             2.2976e-12 +/- 1.309  % 
+Messwelt_1.3              2.3401e-12 +/- 1.366  % 
+Messwelt_1.35             2.3078e-12 +/- 1.283  % 
+Messwelt_1.4              2.3297e-12 +/- 1.341  % 
+Messwelt_1.45             2.3221e-12 +/- 1.344  % 
+Messwelt_1.5              2.3294e-12 +/- 1.379  % 
+Messwelt_1.55             2.3696e-12 +/- 1.382  % 
+Messwelt_1.6              2.3294e-12 +/- 1.346  % 
+Messwelt_1.65             2.3497e-12 +/- 1.364  % 
+Messwelt_1.7              2.3129e-12 +/- 1.366  % 
+Messwelt_1.75             2.4215e-12 +/- 1.464  % 
+Messwelt_1.8              2.3377e-12 +/- 1.374  % 
+Messwelt_1.85             2.3702e-12 +/- 1.371  % 
+Messwelt_1.9              2.3487e-12 +/- 1.367  % 
+Messwelt_1.95             2.3045e-12 +/- 1.330  % 
+Messwelt_2                2.3656e-12 +/- 1.419  % 
+Messwelt_2.05             2.3295e-12 +/- 1.393  % 
+Messwelt_2.1              2.3490e-12 +/- 1.394  % 
+Messwelt_2.15             2.2712e-12 +/- 1.286  % 
+Messwelt_2.2              2.3671e-12 +/- 1.455  % 
+Messwelt_2.25             2.3407e-12 +/- 1.396  % 
+Messwelt_2.3              2.2738e-12 +/- 1.374  % 
+Messwelt_2.35             2.2998e-12 +/- 1.338  % 
+Messwelt_2.4              2.3389e-12 +/- 1.422  % 
+Messwelt_2.45             2.3222e-12 +/- 1.439  % 
+Messwelt_2.5              2.3115e-12 +/- 1.426  % 
+Messwelt_2.55             2.2671e-12 +/- 1.356  % 
+Messwelt_2.6              2.2948e-12 +/- 1.376  % 
+Messwelt_2.65             2.2757e-12 +/- 1.402  % 
+Messwelt_2.7              2.2783e-12 +/- 1.374  % 
+Messwelt_2.75             2.2739e-12 +/- 1.351  % 
+Messwelt_2.8              2.2985e-12 +/- 1.414  % 
+Messwelt_2.85             2.2278e-12 +/- 1.349  % 
+Messwelt_2.9              2.2826e-12 +/- 1.433  % 
+Messwelt_2.95             2.2516e-12 +/- 1.369  % 
+Messwelt_3                2.3047e-12 +/- 1.481  % 
+Messwelt_3.05             2.2913e-12 +/- 1.433  % 
+Messwelt_3.1              2.2190e-12 +/- 1.372  % 
+Messwelt_3.15             2.2189e-12 +/- 1.349  % 
+Messwelt_3.2              2.2356e-12 +/- 1.351  % 
+Messwelt_3.25             2.2225e-12 +/- 1.377  % 
+Messwelt_3.3              2.2124e-12 +/- 1.336  % 
+Messwelt_3.35             2.2241e-12 +/- 1.383  % 
+Messwelt_3.4              2.2525e-12 +/- 1.427  % 
+Messwelt_3.45             2.2336e-12 +/- 1.418  % 
+Messwelt_3.5              2.2548e-12 +/- 1.403  % 
+Messwelt_3.55             2.2159e-12 +/- 1.412  % 
+Messwelt_3.6              2.2529e-12 +/- 1.443  % 
+Messwelt_3.65             2.1897e-12 +/- 1.365  % 
+Messwelt_3.7              2.1996e-12 +/- 1.375  % 
+Messwelt_3.75             2.2176e-12 +/- 1.391  % 
+Messwelt_3.8              2.2210e-12 +/- 1.421  % 
+Messwelt_3.85             2.2488e-12 +/- 1.443  % 
+Messwelt_3.9              2.2349e-12 +/- 1.428  % 
+Messwelt_3.95             2.1933e-12 +/- 1.430  % 
+Messwelt_4                2.1412e-12 +/- 1.359  % 
+
+
+
+
+================================================================================
+Finished simulation
+
+  Elapsed time:                 2040.4 s (  0.567 h)
+  CPU time:                     2000.2 s (  0.556 h)
+  Ratio:                          1.020
+
+
+End of run                                             Tue May 29 09:01:51 2018
+================================================================================
+finishSimulation(egs_chamber) 0
