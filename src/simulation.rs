@@ -348,6 +348,13 @@ impl<T> Omitable<T> {
         }
     }
 
+    pub fn is_available(&self) -> bool {
+        match self {
+            &Omitable::Available(_) => true,
+            _ => false
+        }
+    }
+
     pub fn into_result(self) -> Result<T> {
         match self {
             Omitable::Fail(s) => Err(s),

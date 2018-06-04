@@ -104,12 +104,18 @@ fn test_run_bad_pegs() {
     let output_path = tempdir().unwrap().path().join(randstring());
     let soutput_path = output_path.to_str().unwrap();
     assert_cli::Assert::main_binary()
-        .with_args(&["run", sinput_path, "-o", soutput_path, "-p", "tutor_data"])
+        .with_args(&["run", sinput_path, "-o", soutput_path, "-p", "tutor_data",
+        "-t4"])
         .stdout()
         .contains("PROGRAM STOPPED IN HATCH BECAUSE THE")
         .unwrap();
 
-    let _r: ParSimReport = load(&output_path).unwrap();
+    let r: ParSimReport = load(&output_path).unwrap();
+    let runs = r.single_runs;
+    assert_eq!(runs.len(),4);
+    // no output should be discarded in case of problem
+    assert!(runs.iter().all(|r|r.stdout.is_available()));
+    assert!(runs.iter().all(|r|r.stderr.is_available()));
 }
 
 #[test]
