@@ -1,5 +1,6 @@
 use errors::*;
 use std::fmt;
+use std::convert::From;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum Omittable<T> {
@@ -8,19 +9,22 @@ pub enum Omittable<T> {
     Available(T),
 }
 
-impl<T> Omittable<T> {
-
-
-    pub fn from_result(r: Result<T>) -> Omittable<T> {
-        Omittable::from_stub_result(r.into_stub())
+impl<T> From<Result<T>> for Omittable<T> {
+    fn from(res:Result<T>)->Self {
+        Omittable::from(res.into_stub())
     }
+}
 
-    pub fn from_stub_result(r: StubResult<T>) -> Omittable<T> {
-        match r {
+impl<T> From<StubResult<T>> for Omittable<T> {
+    fn from(res:StubResult<T>)->Self {
+        match res {
             Ok(value) => Omittable::Available(value),
             Err(s) => Omittable::Fail(s),
         }
     }
+}
+
+impl<T> Omittable<T> {
 
     pub fn is_available(&self) -> bool {
         match self {

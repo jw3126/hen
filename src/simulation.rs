@@ -364,9 +364,9 @@ impl SingSimFinished {
     pub fn report(&self) -> SingSimReport {
         let out = self.parse_output();
         let exit_status = Omittable::Available(self.exit_status);
-        let dose = Omittable::from_stub_result(out.dose);
-        let total_cpu_time = Omittable::from_stub_result(out.total_cpu_time);
-        let simulation_finished = Omittable::from_stub_result(out.simulation_finished);
+        let dose = Omittable::from(out.dose);
+        let total_cpu_time = Omittable::from(out.total_cpu_time);
+        let simulation_finished = Omittable::from(out.simulation_finished);
         let stderr = match simulation_finished {
             Omittable::Available(true) => Omittable::Omitted,
             _ => Omittable::Available(self.stderr.clone()),
@@ -394,9 +394,9 @@ impl SingSimFinished {
     pub fn report_full(&self) -> SingSimReport {
         let out = self.parse_output();
         let exit_status = Omittable::Available(self.exit_status);
-        let dose = Omittable::from_stub_result(out.dose);
-        let total_cpu_time = Omittable::from_stub_result(out.total_cpu_time);
-        let simulation_finished = Omittable::from_stub_result(out.simulation_finished);
+        let dose = Omittable::from(out.dose);
+        let total_cpu_time = Omittable::from(out.total_cpu_time);
+        let simulation_finished = Omittable::from(out.simulation_finished);
         let stdout = Omittable::Available(self.stdout.clone());
         let stderr = Omittable::Available(self.stderr.clone());
         let input = Omittable::Available(self.input.clone());
@@ -463,7 +463,7 @@ fn compute_simulation_finished(single_runs: &[SingSimReport]) -> Omittable<bool>
 }
 
 fn compute_dose(single_runs: &[SingSimReport]) -> Omittable<Vec<(String, Uf64)>> {
-    Omittable::from_result(compute_dose_result(&single_runs))
+    Omittable::from(compute_dose_result(&single_runs))
 }
 
 fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uf64)>> {
