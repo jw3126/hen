@@ -65,6 +65,10 @@ impl<T> Omittable<T> {
             },
         }
     }
+
+    pub fn unwrap(self: Omittable<T>) -> T {
+        self.into_stub_result().unwrap()
+    }
 }
 
 impl<T> fmt::Display for Omittable<T>

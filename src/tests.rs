@@ -49,7 +49,9 @@ fn test_run_umlauts() {
 fn test_zero_dose_with_100_uncertainty() {
     let input_path = asset_path().join("nan.egsinp");
     let report = run_and_load(&input_path, &[]);
-    // TODO check that output contains 100% uncertainty
+    let doses = report.dose.unwrap();
+    let (_, score) = doses[0];
+    assert_eq!(score, Uf64::from_value_rstd(0., 1.));
 }
 
 #[test]
@@ -65,7 +67,7 @@ fn test_run_multiple_geometries() {
         .unwrap();
 
     let r: ParSimReport = load(&output_path).unwrap();
-    let doses = r.dose.into_stub_result().unwrap();
+    let doses = r.dose.unwrap();
     assert_eq!(doses.len(), 3);
     let (ref geo0, dose0) = doses[0];
     let (ref geo1, dose1) = doses[1];
@@ -99,7 +101,7 @@ fn test_run_custom_seeds_ncases() {
     assert_eq!(r.input.seeds, vec![(1983, 324), (3, 4)]);
     assert_eq!(r.input.ncases, vec![173, 200]);
     let outs = r.single_runs;
-    let s: String = outs[0].clone().input.into_stub_result().unwrap().content;
+    let s: String = outs[0].clone().input.unwrap().content;
     assert!(s.contains("173"));
     assert!(s.contains("1983 324"));
 }
@@ -181,7 +183,7 @@ fn test_rerun() {
 
     assert!(r1 != r2);
     assert_eq!(r1.dose, r2.dose);
-    r1.dose.into_stub_result().unwrap();
+    r1.dose.unwrap();
 }
 
 #[test]
@@ -265,15 +267,12 @@ fn test_split_run_combine() {
     let rep_combined = files[0].clone();
     let rep_single = run_and_load(&input_path, &["-t6"]);
     assert!(rep_combined != rep_single);
-    assert_close_doses(
-        rep_combined.dose.into_stub_result().unwrap(),
-        rep_single.dose.into_stub_result().unwrap(),
-    );
+    assert_close_doses(rep_combined.dose.unwrap(), rep_single.dose.unwrap());
 }
 
 #[test]
 fn test_error_message() {
-    let non_existing_path = "asdfdfgadfgadsfasdfs.egsinp";
+    let non_existing_path = "asdfdjlnj032v8m0*#$fgadfgadsfasdfs.egsinp";
     assert_cli::Assert::main_binary()
         .with_args(&["run", non_existing_path, "-o", "myout"])
         .fails()
