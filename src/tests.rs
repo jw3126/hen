@@ -270,3 +270,15 @@ fn test_split_run_combine() {
         rep_single.dose.into_stub_result().unwrap(),
     );
 }
+
+#[test]
+fn test_error_message() {
+    let non_existing_path = "asdfdfgadfgadsfasdfs.egsinp";
+    assert_cli::Assert::main_binary()
+        .with_args(&["run", non_existing_path, "-o", "myout"])
+        .fails()
+        .and()
+        .stderr().contains(non_existing_path)
+        .stderr().contains("Caused by: No such file or directory")
+        .unwrap();
+}
