@@ -6,7 +6,6 @@ use serde_json as serde_format;
 // use serde_yaml as serde_format // produces ugly yaml files
 use std::path::{Path, PathBuf};
 use std::fs;
-use std::fmt::Debug;
 use std::fmt;
 use errors::*;
 
@@ -58,7 +57,8 @@ impl<T> WithMeta<T> {
 }
 
 pub fn save<T: Serialize>(path: &Path, obj: &T) -> Result<()> {
-    let file = fs::File::create(path).map_err(debug_string)?;
+    let file = fs::File::create(path)
+        .chain_err(||cannot_create(&path))?;
     let obj = WithMeta::new(obj);
     serde_format::to_writer_pretty(file, &obj)
         .chain_err(||cannot_write(&path))?;
@@ -70,14 +70,11 @@ pub fn load<T>(path: &Path) -> Result<T>
 where
     for<'de> T: serde::Deserialize<'de>,
 {
-    let reader = fs::File::open(path).map_err(debug_string)?;
+    let reader = fs::File::open(path)
+        .chain_err(||cannot_read(&path))?;
     let ret: WithMeta<T> = serde_format::from_reader(reader)
         .chain_err(||cannot_read(&path))?;
     Ok(ret.content)
-}
-
-pub fn debug_string<E: Debug>(e: E) -> String {
-    format!("{:?}", e)
 }
 
 #[allow(dead_code)]

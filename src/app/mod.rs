@@ -464,7 +464,8 @@ impl SubCmd for RunConfig {
             Err(_) => None,
             Ok(s) => {
                 let v: Vec<Seed> =
-                    serde_json::from_str(s).map_err(|_| "Cannot parse SEEDS".to_string())?;
+                    serde_json::from_str(s)
+                        .chain_err(|| "Cannot parse SEEDS")?;
                 Some(v)
             }
         };
@@ -472,7 +473,8 @@ impl SubCmd for RunConfig {
             Err(_) => None,
             Ok(s) => {
                 let v: Vec<u64> =
-                    serde_json::from_str(s).map_err(|_| "Cannot parse NCASES".to_string())?;
+                    serde_json::from_str(s).
+                        chain_err(||"Cannot parse NCASES")?;
                 Some(v)
             }
         };

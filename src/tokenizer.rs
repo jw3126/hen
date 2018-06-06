@@ -1,7 +1,6 @@
 use std::io::{BufRead, BufReader};
 use std::option::Option;
 use std::iter::Iterator;
-use util::{debug_string};
 use simulation::Seed;
 use errors::*;
 
@@ -191,7 +190,8 @@ impl TokenStream {
         let sncase = self.get_index(index_ncase)
             .value()
             .ok_or("Cannor parse ncase")?;
-        let ncase: u64 = str::parse(&sncase).map_err(debug_string)?;
+        let ncase: u64 = str::parse(&sncase)
+            .chain_err(||format!("Cannot parse ncase from {:?}",sncase))?;
         Ok(ncase)
     }
 

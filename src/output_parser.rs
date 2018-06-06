@@ -41,7 +41,8 @@ fn parse_total_cpu_time(line: &str) -> StubResult<f64> {
         .get(1)
         .ok_or_else(|| err.clone())?
         .as_str();
-    let ret: f64 = s.parse::<f64>().map_err(|_| err.clone())?;
+    let ret: f64 = s.parse::<f64>()
+        .map_err(|_| err.clone())?;
     return Ok(ret);
 }
 

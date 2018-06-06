@@ -44,11 +44,12 @@ mod tests;
 
 use app::app_main;
 use std::io::Write;
-use errors::Result;
+use errors::*;
 use error_chain::ChainedError;
 
 fn main() {    
-    let res : Result<()> = app_main();
+    let res : Result<()> = app_main()
+        .chain_err(||"Hen failed");
     if let Err(e) = res {
         let stderr = &mut ::std::io::stderr();
         let errmsg = "Error writing to stderr";

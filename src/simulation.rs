@@ -12,7 +12,6 @@ use std;
 use uncertain::Uf64;
 use output_parser;
 use std::fmt;
-use util::{debug_string};
 use errors::*;
 use util;
 use std::result::Result as StdResult;
@@ -248,13 +247,15 @@ fn egs_home_path() -> PathBuf {
 
 impl SingSimInput {
     pub fn from_egsinp_path(application: &str, path: &Path, pegsfile: &str) -> Result<Self> {
-        let mut file = File::open(path).map_err(|err| format!("{:?}", err))?;
+        let mut file = File::open(path)
+            .chain_err(||cannot_read(&path))?;
         let mut content = String::new();
         let filename = path.file_name()
             .ok_or("Error getting file_name")?
             .to_str()
             .unwrap();
-        file.read_to_string(&mut content).map_err(debug_string)?;
+        file.read_to_string(&mut content)
+            .chain_err(||cannot_read(&path))?;
         let sim = SingSimInputBuilder::new()
             .pegsfile(pegsfile)
             .filename(filename)
