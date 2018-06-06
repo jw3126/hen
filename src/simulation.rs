@@ -12,7 +12,8 @@ use std;
 use uncertain::Uf64;
 use output_parser;
 use std::fmt;
-use util::{debug_string, Result};
+use util::{debug_string};
+use errors::*;
 use util;
 use std::result::Result as StdResult;
 use itertools::Itertools;
@@ -98,7 +99,7 @@ impl SingSimInputBuilder {
                 };
                 Ok(sim)
             }
-            _ => Err("All fields of builder should be set.".to_string()),
+            _ => bail!("All fields of builder should be set.")
         }
     }
 }
@@ -120,9 +121,9 @@ pub struct SingSimFinished {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SingSimParsedOutput {
-    pub dose: Result<Vec<(String, Uf64)>>,
-    pub total_cpu_time: Result<f64>,
-    pub simulation_finished: Result<bool>,
+    pub dose: StubResult<Vec<(String, Uf64)>>,
+    pub total_cpu_time: StubResult<f64>,
+    pub simulation_finished: StubResult<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -188,20 +189,18 @@ impl ParSimInput {
             input: self.clone(),
             outputs,
         };
-        return Ok(ret);
+        Ok(ret)
     }
 
     pub fn validate(&self) -> Result<()> {
         let len_seeds = self.seeds.len();
         let len_ncases = self.ncases.len();
         if len_seeds != len_ncases {
-            let msg = format!("Got {} seeds, but {} ncases", len_seeds, len_ncases);
-            return Err(msg.to_string());
+            bail!("Got {} seeds, but {} ncases", len_seeds, len_ncases);
         }
 
         if !util::has_unique_elements(self.seeds.clone()) {
-            let msg = "Duplicate seeds detected.";
-            return Err(msg.to_string());
+            bail!("Duplicate seeds {:?}", self.seeds);
         }
 
         Ok(())
@@ -209,17 +208,14 @@ impl ParSimInput {
 
     fn validate_combine(inps: &[ParSimInput]) -> Result<()> {
         if inps.is_empty() {
-            return Err("Cannot combine empty collection of simulations.".to_string());
+            bail!("Cannot combine empty collection of simulations.");
         }
         let checksums: Vec<String> = inps.iter()
             .map(|inp| inp.prototype.checksum.clone())
             .collect();
         if !checksums.iter().all_equal() {
-            let msg = format!(
-                "Cannot combine simulations with different checksums: {:?}",
-                checksums
-            ).to_string();
-            return Err(msg);
+            bail!("Cannot combine simulations with different checksums: {:?}",
+                checksums);
         }
         Ok(())
     }
@@ -352,7 +348,8 @@ impl SingSimInput {
 impl SingSimFinished {
     fn parse_output(&self) -> SingSimParsedOutput {
         let mut reader = BufReader::new(self.stdout.as_bytes());
-        let rout = output_parser::parse_simulation_output(&mut reader);
+        let rout = output_parser::parse_simulation_output(&mut reader)
+            .into_stub();
         match rout {
             Ok(ret) => ret,
             Err(err) => SingSimParsedOutput {
@@ -366,9 +363,9 @@ impl SingSimFinished {
     pub fn report(&self) -> SingSimReport {
         let out = self.parse_output();
         let exit_status = Omittable::Available(self.exit_status);
-        let dose = Omittable::from_result(out.dose);
-        let total_cpu_time = Omittable::from_result(out.total_cpu_time);
-        let simulation_finished = Omittable::from_result(out.simulation_finished);
+        let dose = Omittable::from_stub_result(out.dose);
+        let total_cpu_time = Omittable::from_stub_result(out.total_cpu_time);
+        let simulation_finished = Omittable::from_stub_result(out.simulation_finished);
         let stderr = match simulation_finished {
             Omittable::Available(true) => Omittable::Omitted,
             _ => Omittable::Available(self.stderr.clone()),
@@ -396,9 +393,9 @@ impl SingSimFinished {
     pub fn report_full(&self) -> SingSimReport {
         let out = self.parse_output();
         let exit_status = Omittable::Available(self.exit_status);
-        let dose = Omittable::from_result(out.dose);
-        let total_cpu_time = Omittable::from_result(out.total_cpu_time);
-        let simulation_finished = Omittable::from_result(out.simulation_finished);
+        let dose = Omittable::from_stub_result(out.dose);
+        let total_cpu_time = Omittable::from_stub_result(out.total_cpu_time);
+        let simulation_finished = Omittable::from_stub_result(out.simulation_finished);
         let stdout = Omittable::Available(self.stdout.clone());
         let stderr = Omittable::Available(self.stderr.clone());
         let input = Omittable::Available(self.input.clone());
@@ -469,9 +466,9 @@ fn compute_dose(single_runs: &[SingSimReport]) -> Omittable<Vec<(String, Uf64)>>
 }
 
 fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uf64)>> {
-    let doses1: Vec<Result<Vec<(String, Uf64)>>> = reports
+    let doses1: Vec<StubResult<Vec<(String, Uf64)>>> = reports
         .iter()
-        .map(|o| o.dose.clone().into_result())
+        .map(|o| o.dose.clone().into_stub_result())
         .collect();
     let doses2 = traverse_result(doses1)?;
     if doses2.is_empty() {
@@ -481,10 +478,7 @@ fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uf64)>>
     let nruns = doses2.len();
     for i_run in 1..nruns {
         if doses2[i_run].len() != ret.len() {
-            let msg = "Simulations have inconsistend 
-                numbers of scoring geometries."
-                .to_string();
-            return Err(msg);
+            bail!("Simulations have inconsistend numbers of scoring geometries.");
         }
         for i_reg in 0..ret.len() {
             let d_new = {
@@ -493,10 +487,7 @@ fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uf64)>>
                 if *s_inc == *s_ret {
                     *d_ret + *d_inc
                 } else {
-                    let msg = "Simulation have inconsistent scoring regions
-                    "
-                        .to_string();
-                    Err(msg)?
+                    bail!("Simulation have inconsistent scoring regions");
                 }
             };
             ret[i_reg].1 = d_new;
@@ -715,7 +706,7 @@ mod tests {
         let dose_combined = Uf64::from_value_var(1. / 8., 0.)
             * (dose1 + dose2 + dose3 + dose4 + dose5 + dose6 + dose7 + dose8);
 
-        let dose_reported = report.dose.into_result().unwrap().first().unwrap().1;
+        let dose_reported = report.dose.into_stub_result().unwrap().first().unwrap().1;
         assert_relative_eq!(dose_reported.value(), dose_combined.value());
         assert_relative_eq!(dose_reported.rstd(), dose_combined.rstd());
     }

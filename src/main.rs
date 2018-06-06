@@ -27,6 +27,9 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 
+#[macro_use]
+extern crate error_chain;
+
 mod tokenizer;
 mod simulation;
 mod output_parser;
@@ -34,22 +37,22 @@ mod util;
 mod uncertain;
 mod omittable;
 mod app;
+mod errors;
 
 #[cfg(test)]
 mod tests;
 
 use app::app_main;
 use std::io::Write;
+use errors::Result;
+use error_chain::ChainedError;
 
-pub fn error(msg: &str) {
-    writeln!(&mut std::io::stderr(), "Error:\n{}", msg).expect("Failed writeln! to stderr");
-    std::process::exit(1);
-    //panic!();
-}
-
-fn main() {
-    match app_main() {
-        Ok(_) => {}
-        Err(err) => error(&err),
-    }
+fn main() {    
+    let res : Result<()> = app_main();
+    if let Err(e) = res {
+        let stderr = &mut ::std::io::stderr();
+        let errmsg = "Error writing to stderr";
+        writeln!(stderr, "{}", e.display_chain()).expect(errmsg);
+        std::process::exit(1);
+    };
 }

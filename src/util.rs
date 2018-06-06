@@ -5,12 +5,10 @@ use serde;
 use serde_json as serde_format;
 // use serde_yaml as serde_format // produces ugly yaml files
 use std::path::{Path, PathBuf};
-use std;
 use std::fs;
 use std::fmt::Debug;
 use std::fmt;
-
-pub type Result<T> = std::result::Result<T, String>;
+use errors::*;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HenInfo {
@@ -62,8 +60,9 @@ impl<T> WithMeta<T> {
 pub fn save<T: Serialize>(path: &Path, obj: &T) -> Result<()> {
     let file = fs::File::create(path).map_err(debug_string)?;
     let obj = WithMeta::new(obj);
-    serde_format::to_writer_pretty(file, &obj).map_err(debug_string)?;
-    return Ok(());
+    serde_format::to_writer_pretty(file, &obj)
+        .chain_err(||cannot_write(&path))?;
+    Ok(())
 }
 
 #[allow(dead_code)]
@@ -72,8 +71,9 @@ where
     for<'de> T: serde::Deserialize<'de>,
 {
     let reader = fs::File::open(path).map_err(debug_string)?;
-    let ret: WithMeta<T> = serde_format::from_reader(reader).map_err(debug_string)?;
-    return Ok(ret.content);
+    let ret: WithMeta<T> = serde_format::from_reader(reader)
+        .chain_err(||cannot_read(&path))?;
+    Ok(ret.content)
 }
 
 pub fn debug_string<E: Debug>(e: E) -> String {
@@ -95,7 +95,7 @@ pub fn asset_path() -> PathBuf {
 
 pub fn read_paths_in_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let ret = fs::read_dir(dir)
-        .map_err(debug_string)?
+        .chain_err(||cannot_read(&dir))?
         .map(|entry| entry.unwrap().path())
         .collect();
     Ok(ret)

@@ -1,4 +1,4 @@
-use util::Result;
+use errors::*;
 use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -9,7 +9,13 @@ pub enum Omittable<T> {
 }
 
 impl<T> Omittable<T> {
+
+
     pub fn from_result(r: Result<T>) -> Omittable<T> {
+        Omittable::from_stub_result(r.into_stub())
+    }
+
+    pub fn from_stub_result(r: StubResult<T>) -> Omittable<T> {
         match r {
             Ok(value) => Omittable::Available(value),
             Err(s) => Omittable::Fail(s),
@@ -23,7 +29,7 @@ impl<T> Omittable<T> {
         }
     }
 
-    pub fn into_result(self) -> Result<T> {
+    pub fn into_stub_result(self) -> StubResult<T> {
         match self {
             Omittable::Fail(s) => Err(s),
             Omittable::Omitted => Err("Omitted".to_string()),

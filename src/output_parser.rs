@@ -2,7 +2,7 @@ use std::io::BufRead;
 use regex::Regex;
 use uncertain::Uf64;
 use simulation::SingSimParsedOutput;
-use util::Result;
+use errors::*;
 use std::path::Path;
 
 fn parse_dot_separated_key_value(s: &str) -> Option<(String, String)> {
@@ -33,7 +33,7 @@ fn read_line(reader: &mut BufRead) -> Option<String> {
     }
 }
 
-fn parse_total_cpu_time(line: &str) -> Result<f64> {
+fn parse_total_cpu_time(line: &str) -> StubResult<f64> {
     let re = Regex::new(r"^Total cpu time for this run:\s*(.*) \(sec.\)").unwrap();
     let err = format!("Cannot parse total cpu time from {}", line).to_string();
     let s = re.captures(&line)
@@ -45,7 +45,7 @@ fn parse_total_cpu_time(line: &str) -> Result<f64> {
     return Ok(ret);
 }
 
-fn parse_geometry_dose(line: &str) -> Result<(String, Uf64)> {
+fn parse_geometry_dose(line: &str) -> StubResult<(String, Uf64)> {
     let re = Regex::new(r"^\s*(.*)\s\s*(.*) \+/\- (.*)%").unwrap();
     let caps = re.captures(&line)
         .ok_or(format!("Cannot match {:?} on {:?}.", re, line))?;
@@ -78,14 +78,23 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutp
     let re = Regex::new("^==(=*)").unwrap();
     read_line_until(reader, &re);
     read_line_until(reader, &re);
-    let mut line = read_line(reader).ok_or("Unexpected end of file".to_string())?;
+    let mut line = read_line(reader)
+        .ok_or({
+            let err:Error = "Unexpected end of file".into();
+            err
+        })?;
     while !(re.is_match(&line)) {
         let _kv = parse_dot_separated_key_value(line.trim()).unwrap();
-        line = read_line(reader).ok_or("Unexpected end of file".to_string())?;
+        line = read_line(reader)
+            .ok_or({
+                let err:Error = "Unexpected end of file".into();
+                err
+            })?;
     }
     read_line_until(reader, &Regex::new("^Finished simulation").unwrap());
 
-    let mut mline = read_line_until(reader, &Regex::new("^Total cpu time for this run").unwrap());
+    let mut mline:Option<String> = read_line_until(reader,
+                        &Regex::new("^Total cpu time for this run").unwrap());
     let total_cpu_time = match mline {
         None => Err("Cannot find Total cpu time for this run".to_string()),
         Some(l) => parse_total_cpu_time(&l),
@@ -105,7 +114,7 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutp
             let mut v = Vec::new();
             loop {
                 mline = read_line(reader);
-                if mline == None {
+                if mline.is_none() {
                     break Ok(v);
                 }
                 line = mline.unwrap();
@@ -130,7 +139,7 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutp
     let simulation_finished = match mline {
         None => Err("Cannot find SingSimFinished".to_string()),
         Some(_) => {
-            if read_line(reader) == None {
+            if read_line(reader).is_none() {
                 Ok(true)
             } else {
                 Ok(false)

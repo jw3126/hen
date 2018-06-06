@@ -1,8 +1,9 @@
 use std::io::{BufRead, BufReader};
 use std::option::Option;
 use std::iter::Iterator;
-use util::{debug_string, Result};
+use util::{debug_string};
 use simulation::Seed;
+use errors::*;
 
 use regex::Regex;
 
@@ -27,8 +28,7 @@ impl Token {
         if sp != None {
             return Ok(sp.unwrap());
         };
-        let msg = format!("Cannot parse {}", s.to_string());
-        Err(msg)
+        bail!("Cannot parse {}", s);
     }
 
     fn parse_start(s: &str) -> Option<Token> {
@@ -73,10 +73,22 @@ impl Token {
         s
     }
 
+    fn soft_dec(x:usize) -> usize {
+        if x > 0 {
+            x - 1
+        } else {
+            x
+        }
+    }
+
+    fn soft_inc(x:usize) -> usize {
+        x+1
+    }
+
     pub fn to_string_indent(self: Token, indent: usize) -> (String, usize) {
         let (i_current, i_next) = match self {
-            Token::Start(_) => (indent, indent + 1),
-            Token::Stop(_) => (indent - 1, indent - 1),
+            Token::Start(_) => (indent, Token::soft_inc(indent)),
+            Token::Stop(_) => (Token::soft_dec(indent), Token::soft_dec(indent)),
             Token::KeyValue(_, _) => (indent, indent),
         };
         let ws = "    ".repeat(i_current);
@@ -113,7 +125,7 @@ impl TokenStream {
         let mut tokens = Vec::new();
         loop {
             let ot = Token::read_next(reader);
-            if ot == None {
+            if ot.is_none() {
                 break;
             } // end of file
             let t = ot.unwrap()?;
@@ -217,7 +229,7 @@ fn single<T>(v: &[T]) -> Option<&T> {
 fn read_clean_line(reader: &mut BufRead) -> Result<String> {
     let mut line = String::new();
     if reader.read_line(&mut line).unwrap() == 0 {
-        return Err("End of file".to_string());
+        bail!("End of file");
     }
     let line = line.split('#').next().unwrap();
     let line = line.trim();
@@ -247,26 +259,26 @@ fn read_token_raw(reader: &mut BufRead) -> Result<String> {
 fn test_parse_single_token() {
     let s_start = ":start rng definition:";
     let t_start = Ok(Token::Start("rng definition".to_string()));
-    assert_eq!(Token::parse(s_start), t_start);
+    assert_eq!(Token::parse(s_start).into_stub(), t_start);
 
     let s_stop = ":stop rng definition:";
     let t_stop = Ok(Token::Stop("rng definition".to_string()));
-    assert_eq!(Token::parse(s_stop), t_stop);
+    assert_eq!(Token::parse(s_stop).into_stub(), t_stop);
 
     let s1 = "initial seeds  =  20 1";
     let t1 = Ok(Token::KeyValue(
         "initial seeds".to_string(),
         "20 1".to_string(),
     ));
-    assert_eq!(Token::parse(s1), t1);
+    assert_eq!(Token::parse(s1).into_stub(), t1);
 
     let s2 = "type  =  ranmar";
     let t2 = Ok(Token::KeyValue("type".to_string(), "ranmar".to_string()));
-    assert_eq!(Token::parse(s2), t2);
+    assert_eq!(Token::parse(s2).into_stub(), t2);
 
     let s_garbage = "garbage";
     let t_garbage = Err("Cannot parse garbage".to_string());
-    assert_eq!(Token::parse(s_garbage), t_garbage);
+    assert_eq!(Token::parse(s_garbage).into_stub(), t_garbage);
 }
 
 #[test]

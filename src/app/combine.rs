@@ -1,7 +1,8 @@
 use clap::ArgMatches;
 use std::path::PathBuf;
 use app::util::SubCmd;
-use util::{read_paths_in_dir, Result};
+use util::{read_paths_in_dir};
+use errors::*;
 use std::collections::HashMap;
 use simulation::ParSimReport;
 use app::util::GetMatch;
