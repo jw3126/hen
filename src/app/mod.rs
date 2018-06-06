@@ -3,7 +3,8 @@ use clap;
 use std::path::{Path, PathBuf};
 use num_cpus;
 use simulation::{ParSimInput, ParSimReport, Seed, SingSimInput};
-use util::{debug_string, load, save, Result};
+use util::{load, save};
+use errors::*;
 use std::fs;
 use std::process;
 use std::io::Write;
@@ -145,10 +146,10 @@ struct SplitConfig {
 impl SplitConfig {
     fn validate(&self) -> Result<()> {
         if self.nthreads == 0 {
-            return Err("NTHREADS > 0 must hold.".to_string());
+            bail!("NTHREADS > 0 must hold.");
         }
         if self.nfiles == 0 {
-            return Err("NFILES > 0 must hold.".to_string());
+            bail!("NFILES > 0 must hold.");
         }
         Ok(())
     }
@@ -219,14 +220,15 @@ impl SubCmd for FormatConfig {
 
     fn run(&self) -> Result<()> {
         let formatted = {
-            let file = fs::File::open(&self.input_path).map_err(debug_string)?;
+            let file = fs::File::open(&self.input_path)
+                .chain_err(||cannot_read(&self.input_path))?;
             let mut reader = BufReader::new(file);
             TokenStream::parse_reader(&mut reader)?.to_string()
         };
         fs::File::create(&self.input_path)
-            .map_err(debug_string)?
+            .chain_err(||cannot_create(&self.input_path))?
             .write_all(formatted.as_str().as_bytes())
-            .map_err(debug_string)
+            .chain_err(||cannot_write(&self.input_path))
     }
 }
 
@@ -266,13 +268,9 @@ impl SubCmd for ViewConfig {
     fn run(&self) -> Result<()> {
         let ext = self.path
             .extension()
-            .ok_or(
-                "Cannot parse extension of 
-                   input path"
-                    .to_string(),
-            )?
+            .chain_err(||format!("Cannot parse extension of {:?}",self.path))?
             .to_str()
-            .ok_or("Unicode problem with input path".to_string())?;
+            .chain_err(||format!("Cannot convert ext to_str {:?}",self.path))?;
         match ext {
             "egsinp" => {
                 let spath = self.path.to_str().unwrap();
@@ -282,7 +280,7 @@ impl SubCmd for ViewConfig {
                 self.run_json()?;
             }
             _ => {
-                return Err(format!("unknown extension {:?}", ext));
+                bail!("Unknown extension {:?}", ext);
             }
         }
         Ok(())
@@ -295,10 +293,13 @@ impl ViewConfig {
         let content = report.input.prototype.content;
         let filestem = report.input.prototype.checksum;
         let filename = format!("{}.egsinp", filestem);
-        let mut file = fs::File::create(&filename).map_err(debug_string)?;
-        file.write_all(content.as_bytes()).map_err(debug_string)?;
+        let mut file = fs::File::create(&filename).
+            chain_err(||cannot_create(&filename))?;
+        file.write_all(content.as_bytes())
+            .chain_err(||cannot_write(&filename))?;
         let out = self.run_egsinp(&filename);
-        fs::remove_file(filename).map_err(debug_string)?;
+        fs::remove_file(&filename)
+            .chain_err(||cannot_remove(&filename))?;
         out?;
         Ok(())
     }
@@ -307,12 +308,11 @@ impl ViewConfig {
         let ret = process::Command::new("egs_view")
             .args(&[filename])
             .output()
-            .map_err(|e| format!("egs_view failed: {:?}", e).to_string())?;
+            .chain_err(||"egs_view failed")?;
         if ret.status.success() {
             Ok(ret)
         } else {
-            let msg = format!("{:?}", ret);
-            Err(msg)
+            bail!("Bad exit status from egs_view: {:?}", ret);
         }
     }
 }
@@ -336,7 +336,9 @@ struct ShowConfig {
 impl SubCmd for ShowConfig {
     fn parse(m: &ArgMatches) -> Result<ShowConfig> {
         let path = m.get_abspath("PATH")?;
-        let what = value_t!(m, "WHAT", ShowWhat).map_err(debug_string)?;
+        // TODO get_enum
+        let what = value_t!(m, "WHAT", ShowWhat)
+            .chain_err(||"Could not parse argument")?;
         Ok(ShowConfig { path, what })
     }
 
@@ -368,12 +370,12 @@ struct RunConfig {
 impl RunConfig {
     pub fn validate(&self) -> Result<()> {
         if self.nthreads == 0 {
-            return Err("NTHREADS > 0 must hold.".to_string());
+            bail!("NTHREADS > 0 must hold.");
         }
         if let Some(ref seeds) = self.seeds {
             if let Some(ref ncases) = self.ncases {
                 if seeds.len() != ncases.len() {
-                    return Err("SEEDS and NCASES must have the same length.".to_string());
+                    bail!("SEEDS and NCASES must have the same length.");
                 }
             }
         }
@@ -386,10 +388,14 @@ impl RunConfig {
 
     fn run_par_input(&self, p: &ParSimInput, output_path: &Path) -> Result<()> {
         match output_path.parent() {
-            None => {}
-            Some(d) => fs::create_dir_all(d).map_err(debug_string)?,
+            None => {},
+            Some(d) => fs::create_dir_all(d)
+                .chain_err(||
+                    format!("Cannot create output directory at {:?}",output_path))?
         };
-        let out = p.run_with_cleanup_option(self.cleanup)?.report();
+        let out = p.run_with_cleanup_option(self.cleanup)
+            .chain_err(||"Error running parallel simulation")?
+            .report();
         println!("{}", out);
         save(output_path, &out)
     }
@@ -458,7 +464,8 @@ impl SubCmd for RunConfig {
             Err(_) => None,
             Ok(s) => {
                 let v: Vec<Seed> =
-                    serde_json::from_str(s).map_err(|_| "Cannot parse SEEDS".to_string())?;
+                    serde_json::from_str(s)
+                        .chain_err(|| "Cannot parse SEEDS")?;
                 Some(v)
             }
         };
@@ -466,7 +473,8 @@ impl SubCmd for RunConfig {
             Err(_) => None,
             Ok(s) => {
                 let v: Vec<u64> =
-                    serde_json::from_str(s).map_err(|_| "Cannot parse NCASES".to_string())?;
+                    serde_json::from_str(s).
+                        chain_err(||"Cannot parse NCASES")?;
                 Some(v)
             }
         };
@@ -506,6 +514,6 @@ pub fn app_main() -> Result<()> {
             "Welcome to hen!\n{}\nTry hen --help",
             HenInfo::new()
         )),
-        x => Err(format!("Unknown subcommand {:?}. Try hen --help", x).to_string()),
+        x => bail!("Unknown subcommand {:?}. Try hen --help", x)
     }
 }

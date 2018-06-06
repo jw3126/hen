@@ -2,7 +2,7 @@ use clap::{Arg, ArgMatches};
 use std::path::{Path, PathBuf};
 use std::env::current_dir;
 use std;
-use util::Result;
+use errors::*;
 
 pub fn arg_input() -> Arg<'static, 'static> {
     Arg::with_name("INPUT")
@@ -82,17 +82,21 @@ pub trait GetMatch {
         T: std::str::FromStr,
     {
         let s = self.get(key)?;
-        let ret = s.parse::<T>()
-            .map_err(|_| format!("Cannot parse {} from {}", key, s).to_string())?;
-        Ok(ret)
+        let ret = s.parse::<T>();
+        match ret {
+            Ok(x) => Ok(x),
+            Err(_) => bail!("Cannot parse {} from {}", key, s)
+        }
     }
 }
 
 impl<'t> GetMatch for ArgMatches<'t> {
     fn get(&self, key: &str) -> Result<&str> {
-        let s = self.value_of(key)
-            .ok_or(format!("ArgMatches do not contain {}", key));
-        s
+        if let Some(s) = self.value_of(key) {
+            return Ok(s)
+        } else {
+            bail!("ArgMatches do not contain {}", key);
+        }
     }
 }
 
@@ -102,7 +106,8 @@ pub fn abspath_from_string(s: &str) -> Result<PathBuf> {
     if isabs {
         path.push(s);
     } else {
-        let dir = current_dir().map_err(|e| format!("{:?}", e))?;
+        let dir = current_dir()
+            .chain_err(|| format!("Cannot from abspath from {:?}", s))?;
         path.push(dir);
         path.push(s);
     }
