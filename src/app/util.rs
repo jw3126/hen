@@ -85,7 +85,7 @@ pub trait GetMatch {
         let ret = s.parse::<T>();
         match ret {
             Ok(x) => Ok(x),
-            Err(_) => bail!("Cannot parse {} from {}", key, s)
+            Err(_) => bail!("Cannot parse {} from {}", key, s),
         }
     }
 }
@@ -93,7 +93,7 @@ pub trait GetMatch {
 impl<'t> GetMatch for ArgMatches<'t> {
     fn get(&self, key: &str) -> Result<&str> {
         if let Some(s) = self.value_of(key) {
-            return Ok(s)
+            return Ok(s);
         } else {
             bail!("ArgMatches do not contain {}", key);
         }
@@ -106,8 +106,7 @@ pub fn abspath_from_string(s: &str) -> Result<PathBuf> {
     if isabs {
         path.push(s);
     } else {
-        let dir = current_dir()
-            .chain_err(|| format!("Cannot from abspath from {:?}", s))?;
+        let dir = current_dir().chain_err(|| format!("Cannot from abspath from {:?}", s))?;
         path.push(dir);
         path.push(s);
     }

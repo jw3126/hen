@@ -220,15 +220,15 @@ impl SubCmd for FormatConfig {
 
     fn run(&self) -> Result<()> {
         let formatted = {
-            let file = fs::File::open(&self.input_path)
-                .chain_err(||cannot_read(&self.input_path))?;
+            let file =
+                fs::File::open(&self.input_path).chain_err(|| cannot_read(&self.input_path))?;
             let mut reader = BufReader::new(file);
             TokenStream::parse_reader(&mut reader)?.to_string()
         };
         fs::File::create(&self.input_path)
-            .chain_err(||cannot_create(&self.input_path))?
+            .chain_err(|| cannot_create(&self.input_path))?
             .write_all(formatted.as_str().as_bytes())
-            .chain_err(||cannot_write(&self.input_path))
+            .chain_err(|| cannot_write(&self.input_path))
     }
 }
 
@@ -268,9 +268,9 @@ impl SubCmd for ViewConfig {
     fn run(&self) -> Result<()> {
         let ext = self.path
             .extension()
-            .chain_err(||format!("Cannot parse extension of {:?}",self.path))?
+            .chain_err(|| format!("Cannot parse extension of {:?}", self.path))?
             .to_str()
-            .chain_err(||format!("Cannot convert ext to_str {:?}",self.path))?;
+            .chain_err(|| format!("Cannot convert ext to_str {:?}", self.path))?;
         match ext {
             "egsinp" => {
                 let spath = self.path.to_str().unwrap();
@@ -293,13 +293,11 @@ impl ViewConfig {
         let content = report.input.prototype.content;
         let filestem = report.input.prototype.checksum;
         let filename = format!("{}.egsinp", filestem);
-        let mut file = fs::File::create(&filename).
-            chain_err(||cannot_create(&filename))?;
+        let mut file = fs::File::create(&filename).chain_err(|| cannot_create(&filename))?;
         file.write_all(content.as_bytes())
-            .chain_err(||cannot_write(&filename))?;
+            .chain_err(|| cannot_write(&filename))?;
         let out = self.run_egsinp(&filename);
-        fs::remove_file(&filename)
-            .chain_err(||cannot_remove(&filename))?;
+        fs::remove_file(&filename).chain_err(|| cannot_remove(&filename))?;
         out?;
         Ok(())
     }
@@ -308,7 +306,7 @@ impl ViewConfig {
         let ret = process::Command::new("egs_view")
             .args(&[filename])
             .output()
-            .chain_err(||"egs_view failed")?;
+            .chain_err(|| "egs_view failed")?;
         if ret.status.success() {
             Ok(ret)
         } else {
@@ -337,8 +335,7 @@ impl SubCmd for ShowConfig {
     fn parse(m: &ArgMatches) -> Result<ShowConfig> {
         let path = m.get_abspath("PATH")?;
         // TODO get_enum
-        let what = value_t!(m, "WHAT", ShowWhat)
-            .chain_err(||"Could not parse argument")?;
+        let what = value_t!(m, "WHAT", ShowWhat).chain_err(|| "Could not parse argument")?;
         Ok(ShowConfig { path, what })
     }
 
@@ -388,13 +385,12 @@ impl RunConfig {
 
     fn run_par_input(&self, p: &ParSimInput, output_path: &Path) -> Result<()> {
         match output_path.parent() {
-            None => {},
+            None => {}
             Some(d) => fs::create_dir_all(d)
-                .chain_err(||
-                    format!("Cannot create output directory at {:?}",output_path))?
+                .chain_err(|| format!("Cannot create output directory at {:?}", output_path))?,
         };
         let out = p.run_with_cleanup_option(self.cleanup)
-            .chain_err(||"Error running parallel simulation")?
+            .chain_err(|| "Error running parallel simulation")?
             .report();
         println!("{}", out);
         save(output_path, &out)
@@ -463,18 +459,14 @@ impl SubCmd for RunConfig {
         let seeds = match m.get("SEEDS") {
             Err(_) => None,
             Ok(s) => {
-                let v: Vec<Seed> =
-                    serde_json::from_str(s)
-                        .chain_err(|| "Cannot parse SEEDS")?;
+                let v: Vec<Seed> = serde_json::from_str(s).chain_err(|| "Cannot parse SEEDS")?;
                 Some(v)
             }
         };
         let ncases = match m.get("NCASES") {
             Err(_) => None,
             Ok(s) => {
-                let v: Vec<u64> =
-                    serde_json::from_str(s).
-                        chain_err(||"Cannot parse NCASES")?;
+                let v: Vec<u64> = serde_json::from_str(s).chain_err(|| "Cannot parse NCASES")?;
                 Some(v)
             }
         };
@@ -514,6 +506,6 @@ pub fn app_main() -> Result<()> {
             "Welcome to hen!\n{}\nTry hen --help",
             HenInfo::new()
         )),
-        x => bail!("Unknown subcommand {:?}. Try hen --help", x)
+        x => bail!("Unknown subcommand {:?}. Try hen --help", x),
     }
 }

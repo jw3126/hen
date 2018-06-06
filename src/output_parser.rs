@@ -41,8 +41,7 @@ fn parse_total_cpu_time(line: &str) -> StubResult<f64> {
         .get(1)
         .ok_or_else(|| err.clone())?
         .as_str();
-    let ret: f64 = s.parse::<f64>()
-        .map_err(|_| err.clone())?;
+    let ret: f64 = s.parse::<f64>().map_err(|_| err.clone())?;
     return Ok(ret);
 }
 
@@ -79,23 +78,21 @@ pub fn parse_simulation_output(reader: &mut BufRead) -> Result<SingSimParsedOutp
     let re = Regex::new("^==(=*)").unwrap();
     read_line_until(reader, &re);
     read_line_until(reader, &re);
-    let mut line = read_line(reader)
-        .ok_or({
-            let err:Error = "Unexpected end of file".into();
-            err
-        })?;
+    let mut line = read_line(reader).ok_or({
+        let err: Error = "Unexpected end of file".into();
+        err
+    })?;
     while !(re.is_match(&line)) {
         let _kv = parse_dot_separated_key_value(line.trim()).unwrap();
-        line = read_line(reader)
-            .ok_or({
-                let err:Error = "Unexpected end of file".into();
-                err
-            })?;
+        line = read_line(reader).ok_or({
+            let err: Error = "Unexpected end of file".into();
+            err
+        })?;
     }
     read_line_until(reader, &Regex::new("^Finished simulation").unwrap());
 
-    let mut mline:Option<String> = read_line_until(reader,
-                        &Regex::new("^Total cpu time for this run").unwrap());
+    let mut mline: Option<String> =
+        read_line_until(reader, &Regex::new("^Total cpu time for this run").unwrap());
     let total_cpu_time = match mline {
         None => Err("Cannot find Total cpu time for this run".to_string()),
         Some(l) => parse_total_cpu_time(&l),

@@ -10,13 +10,13 @@ pub enum Omittable<T> {
 }
 
 impl<T> From<Result<T>> for Omittable<T> {
-    fn from(res:Result<T>)->Self {
+    fn from(res: Result<T>) -> Self {
         Omittable::from(res.into_stub())
     }
 }
 
 impl<T> From<StubResult<T>> for Omittable<T> {
-    fn from(res:StubResult<T>)->Self {
+    fn from(res: StubResult<T>) -> Self {
         match res {
             Ok(value) => Omittable::Available(value),
             Err(s) => Omittable::Fail(s),
@@ -25,7 +25,6 @@ impl<T> From<StubResult<T>> for Omittable<T> {
 }
 
 impl<T> Omittable<T> {
-
     pub fn is_available(&self) -> bool {
         match self {
             &Omittable::Available(_) => true,

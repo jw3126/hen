@@ -278,7 +278,9 @@ fn test_error_message() {
         .with_args(&["run", non_existing_path, "-o", "myout"])
         .fails()
         .and()
-        .stderr().contains(non_existing_path)
-        .stderr().contains("Caused by: No such file or directory")
+        .stderr()
+        .contains(non_existing_path)
+        .stderr()
+        .contains("Caused by: No such file or directory")
         .unwrap();
 }

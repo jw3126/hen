@@ -72,7 +72,7 @@ impl Token {
         s
     }
 
-    fn soft_dec(x:usize) -> usize {
+    fn soft_dec(x: usize) -> usize {
         if x > 0 {
             x - 1
         } else {
@@ -80,8 +80,8 @@ impl Token {
         }
     }
 
-    fn soft_inc(x:usize) -> usize {
-        x+1
+    fn soft_inc(x: usize) -> usize {
+        x + 1
     }
 
     pub fn to_string_indent(self: Token, indent: usize) -> (String, usize) {
@@ -190,8 +190,8 @@ impl TokenStream {
         let sncase = self.get_index(index_ncase)
             .value()
             .ok_or("Cannor parse ncase")?;
-        let ncase: u64 = str::parse(&sncase)
-            .chain_err(||format!("Cannot parse ncase from {:?}",sncase))?;
+        let ncase: u64 =
+            str::parse(&sncase).chain_err(|| format!("Cannot parse ncase from {:?}", sncase))?;
         Ok(ncase)
     }
 

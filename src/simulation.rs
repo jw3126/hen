@@ -98,7 +98,7 @@ impl SingSimInputBuilder {
                 };
                 Ok(sim)
             }
-            _ => bail!("All fields of builder should be set.")
+            _ => bail!("All fields of builder should be set."),
         }
     }
 }
@@ -213,8 +213,10 @@ impl ParSimInput {
             .map(|inp| inp.prototype.checksum.clone())
             .collect();
         if !checksums.iter().all_equal() {
-            bail!("Cannot combine simulations with different checksums: {:?}",
-                checksums);
+            bail!(
+                "Cannot combine simulations with different checksums: {:?}",
+                checksums
+            );
         }
         Ok(())
     }
@@ -247,15 +249,14 @@ fn egs_home_path() -> PathBuf {
 
 impl SingSimInput {
     pub fn from_egsinp_path(application: &str, path: &Path, pegsfile: &str) -> Result<Self> {
-        let mut file = File::open(path)
-            .chain_err(||cannot_read(&path))?;
+        let mut file = File::open(path).chain_err(|| cannot_read(&path))?;
         let mut content = String::new();
         let filename = path.file_name()
             .ok_or("Error getting file_name")?
             .to_str()
             .unwrap();
         file.read_to_string(&mut content)
-            .chain_err(||cannot_read(&path))?;
+            .chain_err(|| cannot_read(&path))?;
         let sim = SingSimInputBuilder::new()
             .pegsfile(pegsfile)
             .filename(filename)
@@ -349,8 +350,7 @@ impl SingSimInput {
 impl SingSimFinished {
     fn parse_output(&self) -> SingSimParsedOutput {
         let mut reader = BufReader::new(self.stdout.as_bytes());
-        let rout = output_parser::parse_simulation_output(&mut reader)
-            .into_stub();
+        let rout = output_parser::parse_simulation_output(&mut reader).into_stub();
         match rout {
             Ok(ret) => ret,
             Err(err) => SingSimParsedOutput {
@@ -496,7 +496,7 @@ fn compute_dose_result(reports: &[SingSimReport]) -> Result<Vec<(String, Uf64)>>
     }
     let wt = Uf64::from_value_var(1. / (nruns as f64), 0.);
     // normalize
-    let mask_nan = |dose:Uf64| {
+    let mask_nan = |dose: Uf64| {
         if dose.rstd().is_finite() {
             dose
         } else {

@@ -57,11 +57,9 @@ impl<T> WithMeta<T> {
 }
 
 pub fn save<T: Serialize>(path: &Path, obj: &T) -> Result<()> {
-    let file = fs::File::create(path)
-        .chain_err(||cannot_create(&path))?;
+    let file = fs::File::create(path).chain_err(|| cannot_create(&path))?;
     let obj = WithMeta::new(obj);
-    serde_format::to_writer_pretty(file, &obj)
-        .chain_err(||cannot_write(&path))?;
+    serde_format::to_writer_pretty(file, &obj).chain_err(|| cannot_write(&path))?;
     Ok(())
 }
 
@@ -70,10 +68,8 @@ pub fn load<T>(path: &Path) -> Result<T>
 where
     for<'de> T: serde::Deserialize<'de>,
 {
-    let reader = fs::File::open(path)
-        .chain_err(||cannot_read(&path))?;
-    let ret: WithMeta<T> = serde_format::from_reader(reader)
-        .chain_err(||cannot_read(&path))?;
+    let reader = fs::File::open(path).chain_err(|| cannot_read(&path))?;
+    let ret: WithMeta<T> = serde_format::from_reader(reader).chain_err(|| cannot_read(&path))?;
     Ok(ret.content)
 }
 
@@ -92,7 +88,7 @@ pub fn asset_path() -> PathBuf {
 
 pub fn read_paths_in_dir(dir: &Path) -> Result<Vec<PathBuf>> {
     let ret = fs::read_dir(dir)
-        .chain_err(||cannot_read(&dir))?
+        .chain_err(|| cannot_read(&dir))?
         .map(|entry| entry.unwrap().path())
         .collect();
     Ok(ret)
