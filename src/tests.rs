@@ -275,7 +275,7 @@ fn test_spaces_in_filename() {
     let path = asset_path().join("nospaces.egsinp");
     let report_nospaces = run_and_load(&path, &[]);
     let path = asset_path().join("s   p ace s.egsinp");
-    let report_spaces   = run_and_load(&path, &[]);
+    let report_spaces = run_and_load(&path, &[]);
     assert_close_doses(report_spaces.dose.unwrap(), report_nospaces.dose.unwrap());
 }
 

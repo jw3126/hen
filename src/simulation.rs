@@ -184,6 +184,7 @@ impl ParSimInput {
             .map(TokenStream::to_string)
             .map(compute_single_output)
             .collect();
+
         let ret = ParSimFinished {
             input: self.clone(),
             outputs,

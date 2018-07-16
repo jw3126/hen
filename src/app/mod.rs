@@ -276,8 +276,8 @@ impl SubCmd for ViewConfig {
                 let spath = self.path.to_str().unwrap();
                 self.run_egsinp(spath)?;
             }
-            "json" => {
-                self.run_json()?;
+            "henout" => {
+                self.run_par_sim_report()?;
             }
             _ => {
                 bail!("Unknown extension {:?}", ext);
@@ -288,7 +288,7 @@ impl SubCmd for ViewConfig {
 }
 
 impl ViewConfig {
-    fn run_json(&self) -> Result<()> {
+    fn run_par_sim_report(&self) -> Result<()> {
         let report: ParSimReport = load(&self.path)?;
         let content = report.input.prototype.content;
         let filestem = report.input.prototype.checksum;
